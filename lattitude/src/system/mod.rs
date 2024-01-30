@@ -26,21 +26,17 @@ impl System {
 
 #[cfg(test)]
 mod test {
-    use std::os::macos::raw::stat;
     use std::time::Duration;
     use actix::clock::sleep;
-    use actix::ContextFutureSpawner;
     use chrono::Timelike;
     use effigy::color::Gray16;
-    use liein::canvas::{Canvas, CanvasActor, HorizontalAlign, VerticalAlign};
-    use liein::view::{View, ViewActor};
+    use liein::canvas::{HorizontalAlign, VerticalAlign};
+    use liein::view::View;
     use crate::coordinator::{AddPage, Coordinator};
     use crate::display::bmp::BmpDisplay;
     use crate::display::Display;
     use crate::font::typewriter;
-    use crate::page::main::{MainPage, MainPageComponents};
     use crate::page::Page;
-    use crate::view::StatusBar;
     use crate::view::text::Text;
     use super::*;
 
