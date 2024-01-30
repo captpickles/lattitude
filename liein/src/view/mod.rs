@@ -4,6 +4,7 @@ use effigy::color::Color;
 use effigy::pixelfield::PixelField;
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex};
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -24,7 +25,7 @@ pub struct StateUpdate<S> {
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct DiscriminantPixelField<C: Color> {
-    pub pixel_field: PixelField<C>,
+    pub pixel_field: Arc<Mutex<PixelField<C>>>,
     pub discriminant: u32,
 }
 
@@ -36,8 +37,8 @@ pub struct Subscriber<C: Color> {
 
 pub trait View<C: Color>: Unpin {
     type Input: Message<Result = ()> + Send + Clone + Unpin + Debug + 'static;
-    fn update<I: Into<Self::Input>>(&mut self, state: I);
-    fn repaint(&self) -> Option<PixelField<C>>;
+    fn update<I: Into<Self::Input>>(&mut self, state: I) -> Option<Arc<Mutex<PixelField<C>>>>;
+    //fn repaint(&self) -> Option<PixelField<C>>;
 
     fn connect<R: Into<Recipient<model::PubSub<Self::Input>>>>(
         self,
@@ -102,8 +103,7 @@ where
     type Result = ();
 
     fn handle(&mut self, msg: StateUpdate<V::Input>, _ctx: &mut Self::Context) -> Self::Result {
-        self.view.update(msg.state);
-        if let Some(pixel_field) = self.view.repaint() {
+        if let Some(pixel_field) = self.view.update(msg.state) {
             for subscriber in &self.subscribers {
                 subscriber.recipient.do_send(DiscriminantPixelField {
                     pixel_field: pixel_field.clone(),
@@ -147,12 +147,10 @@ impl<S: Debug + Unpin + Clone + Send + Message<Result = ()> + 'static, C: Color>
     for PrintlnView<S>
 {
     type Input = S;
-    fn update<I: Into<Self::Input>>(&mut self, state: I) {
+    fn update<I: Into<Self::Input>>(&mut self, state: I) -> Option<Arc<Mutex<PixelField<C>>>>{
         let state = state.into();
         println!("VIEW {:#?}", state);
+        None
     }
 
-    fn repaint(&self) -> Option<PixelField<C>> {
-        Some(PixelField::default())
-    }
 }

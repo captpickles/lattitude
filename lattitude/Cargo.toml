@@ -14,3 +14,6 @@ enum-primitive-derive = "0.3.0"
 num-traits = "0.2.17"
 serde = { version = "1.0.195", features = ["derive"] }
 reqwest = { version = "0.11.23", features = ["blocking", "json"] }
+bmp = "0.5.0"
+ab_glyph = "0.2.23"
+glyph_brush_layout = "0.2.3"

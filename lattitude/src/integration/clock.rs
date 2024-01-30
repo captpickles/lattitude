@@ -25,7 +25,7 @@ impl Controller for Clock {
 
 impl PeriodicController for Clock {
     fn cadence(&mut self) -> Duration {
-        Duration::from_secs(1)
+        Duration::from_secs(60)
     }
 
     fn period_expired(&mut self) -> Option<Self::Output> {

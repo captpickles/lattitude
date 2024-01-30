@@ -142,7 +142,6 @@ impl Color for Gray16 {
     const WHITE: Self = Self::White;
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;

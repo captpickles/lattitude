@@ -35,7 +35,12 @@ where
 
     fn started(&mut self, ctx: &mut Self::Context) {
         let my_addr = ctx.address();
+
         let recipient = self.recipient.clone();
+        my_addr.do_send(PeriodExpired {
+            recipient: recipient.clone(),
+        });
+
         ctx.run_interval(self.controller.cadence(), move |_, _ctx| {
             my_addr.do_send(PeriodExpired {
                 recipient: recipient.clone(),

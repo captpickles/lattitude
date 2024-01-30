@@ -1,8 +1,12 @@
+use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
 use effigy::color::Gray16;
 use effigy::pixelfield::PixelField;
 use liein::view::View;
-use crate::controller::clock::CurrentDateTime;
+use crate::integration::clock::CurrentDateTime;
+
+pub mod text;
+
 
 #[derive(Default)]
 pub struct StatusBar {
@@ -12,14 +16,11 @@ pub struct StatusBar {
 impl View<Gray16> for StatusBar {
     type Input = CurrentDateTime;
 
-    fn update<I: Into<CurrentDateTime>>(&mut self, state: I) {
+    fn update<I: Into<CurrentDateTime>>(&mut self, state: I) -> Option<Arc<Mutex<PixelField<Gray16>>>>{
         let state = state.into();
         self.now = state.0;
         println!("now {}", self.now);
+        None
     }
 
-    fn repaint(&self) -> Option<PixelField<Gray16>> {
-        println!("repaint");
-        Some(PixelField::default())
-    }
 }

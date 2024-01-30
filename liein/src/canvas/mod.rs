@@ -5,6 +5,7 @@ use effigy::color::Color;
 use effigy::pixelfield::PixelField;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex};
 
 #[derive(Copy, Clone, Debug)]
 pub enum HorizontalAlign {
@@ -25,9 +26,9 @@ pub trait Canvas<C: Color + Unpin>: Unpin + Send + 'static {
 
     fn draw(
         &mut self,
-        pixel_field: PixelField<C>,
+        pixel_field: Arc<Mutex<PixelField<C>>>,
         discriminant: Self::Discriminant,
-    ) -> Option<&PixelField<C>>;
+    ) -> Option<Arc<Mutex<PixelField<C>>>>;
 
     fn into_actor(self) -> CanvasActor<Self, C>
     where
@@ -87,6 +88,11 @@ impl<CV: Canvas<C>, C: Color> Handler<DiscriminantPixelField<C>> for CanvasActor
             pixel_field,
             discriminant,
         } = msg;
+
+        {
+            let l = pixel_field.lock().unwrap();
+            println!("canvas says {} for {}", l.len(), discriminant);
+        }
 
         if let Some(discriminant) = CV::Discriminant::from_u32(discriminant) {
             if let Some(pixel_field) = self.canvas.draw(pixel_field, discriminant) {

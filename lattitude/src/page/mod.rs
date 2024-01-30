@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use actix::Recipient;
 use effigy::color::{Color, };
 use effigy::pixelfield::{PixelField, Point};
@@ -15,7 +16,7 @@ pub struct PageComponent<C: Color> {
 }
 
 pub struct Page<C: Color> {
-    pixels: PixelField<C>,
+    pixels: Arc<Mutex<PixelField<C>>>,
     components: Vec<PageComponent<C>>,
 }
 
@@ -23,7 +24,7 @@ pub struct Page<C: Color> {
 impl<C: Color> Default for Page<C> {
     fn default() -> Self {
         Self {
-            pixels: PixelField::default(),
+            pixels: Arc::new( Mutex::new( PixelField::default() )),
             components: vec![],
         }
     }
@@ -33,7 +34,7 @@ impl<C: Color> Page<C> {
 
     pub fn new<F: FnOnce(&mut Self)>(f: F) -> CanvasActor<Self, C> {
         let mut this = Self {
-            pixels: PixelField::default(),
+            pixels: Arc::new( Mutex::new( PixelField::default() )),
             components: vec![],
         };
 
@@ -72,12 +73,28 @@ impl<C: Color> Page<C> {
 impl<C: Color> Canvas<C> for Page<C> {
     type Discriminant = u32;
 
-    fn draw(&mut self, _pixel_field: PixelField<C>, discriminant: Self::Discriminant) -> Option<&PixelField<C>> {
+    fn draw(&mut self, pixel_field: Arc<Mutex<PixelField<C>>>, discriminant: Self::Discriminant) -> Option<Arc<Mutex<PixelField<C>>>> {
+        let pixel_field = pixel_field.lock().unwrap();
         if let Some(component) = self.components.get(discriminant as usize) {
             println!("draw {:?}", component);
+            println!("pixels {}", pixel_field.len());
+
+            let mut dest = self.pixels.lock().unwrap();
+
+            for pixel in pixel_field.iter() {
+
+                let x = component.point.x + pixel.point().x;
+                let y = component.point.y + pixel.point().y;
+
+                dest.set(
+                    (x,y),
+                    pixel.color()
+                );
+
+            }
 
         }
 
-        Some(&self.pixels)
+        Some(self.pixels.clone())
     }
 }

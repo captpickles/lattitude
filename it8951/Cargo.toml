@@ -1,0 +1,19 @@
+[package]
+name = "it8951"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A IT8951 E-Paper driver"
+repository = "https://github.com/pbert519/it8951"
+categories = ["no-std", "embedded"]
+keywords = ["ePaper", "Display", "epd", "eink"]
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+embedded-hal = {version = "0.2.7", features=["unproven"]}
+embedded-graphics = "0.8.0"
+
+#[dev-dependencies]
+#linux-embedded-hal = "0.3.2"

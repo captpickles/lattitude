@@ -26,7 +26,12 @@ where
     }
 
     fn subscribe(&mut self, recipient: Recipient<StateUpdate<S>>) {
-        self.subscribers.push(recipient);
+        self.subscribers.push(recipient.clone());
+        if let Some(state) = &self.state {
+            recipient.do_send( StateUpdate {
+                state: state.clone()
+            } )
+        }
     }
 
     fn unsubscribe(&mut self, recipient: Recipient<StateUpdate<S>>) {

@@ -4,8 +4,8 @@ use crate::color::Color;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 pub struct Point {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl From<(i32, i32)> for Point {
@@ -168,6 +168,17 @@ pub struct Pixel<C: Color> {
     color: C,
 }
 
+impl<C:Color> Pixel<C> {
+    pub fn point(&self) -> Point {
+        self.point
+    }
+
+    pub fn color(&self) -> C {
+        self.color
+    }
+
+}
+
 #[derive(Clone)]
 pub struct PixelField<C: Color> {
     pixels: Vec<Pixel<C>>,
@@ -182,6 +193,15 @@ impl<C: Color> Default for PixelField<C> {
 }
 
 impl<C: Color> PixelField<C> {
+
+    pub fn iter(&self) -> impl Iterator<Item=&Pixel<C>> {
+        self.pixels.iter()
+    }
+
+    pub fn len(&self) -> usize {
+        self.pixels.len()
+    }
+
     pub fn set<P: Into<Point>>(&mut self, point: P, color: C) {
         let point = point.into();
         if let Some(pixel) = self.find_pixel_mut(point) {

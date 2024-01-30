@@ -1,8 +1,10 @@
-pub mod controller;
 pub mod system;
 pub mod view;
 pub mod page;
-mod integration;
+pub mod integration;
+pub mod display;
+mod coordinator;
+mod font;
 
 fn main() {
     println!("Hello, world!");
