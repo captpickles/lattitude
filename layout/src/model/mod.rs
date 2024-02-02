@@ -35,12 +35,9 @@ where
     }
 
     fn unsubscribe(&mut self, recipient: Recipient<StateUpdate<S>>) {
-        self.subscribers = self
+        self
             .subscribers
-            .iter()
-            .filter(|e| **e != recipient)
-            .cloned()
-            .collect();
+            .retain(|e| *e != recipient)
     }
 
     fn update(&mut self, state: S) {
@@ -62,13 +59,15 @@ where
     model: Model<S>,
 }
 
-impl<S> ModelActor<S>
+
+
+impl<S> Default for ModelActor<S>
 where
     S: Message + Send + 'static,
     S::Result: Send,
     S: Clone,
 {
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             model: Model::new(),
         }

@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::ops::{Mul, Range};
 use crate::color::Color;
@@ -53,24 +54,28 @@ impl Rectangle {
 
     pub fn bounding_square(&self) -> Rectangle {
         let dimensions = self.dimensions();
-        if dimensions.width > dimensions.height {
-            Rectangle {
-                nw: self.nw,
-                se: Point {
-                    x: self.nw.y + dimensions.width as i32,
-                    y: self.nw.y + dimensions.height as i32,
-                },
+        match dimensions.width.cmp(&dimensions.height) {
+            Ordering::Less => {
+                Rectangle {
+                    nw: self.nw,
+                    se: Point {
+                        x: self.nw.x + dimensions.height as i32,
+                        y: self.nw.y + dimensions.height as i32,
+                    },
+                }
             }
-        } else if dimensions.height > dimensions.width {
-            Rectangle {
-                nw: self.nw,
-                se: Point {
-                    x: self.nw.x + dimensions.height as i32,
-                    y: self.nw.y + dimensions.height as i32,
-                },
+            Ordering::Equal => {
+                *self
             }
-        } else {
-            *self
+            Ordering::Greater => {
+                Rectangle {
+                    nw: self.nw,
+                    se: Point {
+                        x: self.nw.y + dimensions.width as i32,
+                        y: self.nw.y + dimensions.height as i32,
+                    },
+                }
+            }
         }
     }
 
@@ -202,6 +207,10 @@ impl<C: Color> PixelField<C> {
         self.pixels.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.pixels.is_empty()
+    }
+
     pub fn set<P: Into<Point>>(&mut self, point: P, color: C) {
         let point = point.into();
         if let Some(pixel) = self.find_pixel_mut(point) {
@@ -326,8 +335,8 @@ impl<C: Color> PixelField<C> {
     pub fn trim(&self, background: C) -> PixelField<C> {
         let original_bbox = self.bounding_box();
 
-        let mut nw = original_bbox.nw.clone();
-        let mut se = original_bbox.se.clone();
+        let mut nw = original_bbox.nw;
+        let mut se = original_bbox.se;
 
         'outer:
         for x in original_bbox.x_range() {

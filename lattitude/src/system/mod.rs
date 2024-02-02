@@ -18,7 +18,7 @@ impl Default for System {
 
 impl System {
     fn periodic<C: PeriodicController + 'static>(controller: C) -> Recipient<PubSub<C::Output>> {
-        let model = ModelActor::new().start();
+        let model = ModelActor::default().start();
         let _controller_addr = PeriodicActor::new(controller, model.clone().recipient()).start();
         model.recipient()
     }

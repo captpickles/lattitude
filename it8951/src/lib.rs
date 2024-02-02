@@ -1,5 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 #![warn(missing_docs)]
+#![allow(unused)]
 
 //! IT8951 epaper driver for the waveshare 7.8in display
 //! The implementation is based on the IT8951 I80/SPI/I2C programming guide

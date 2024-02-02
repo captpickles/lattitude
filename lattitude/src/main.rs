@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 pub mod system;
 pub mod view;
 pub mod page;

@@ -20,7 +20,7 @@ impl<I: Iterator<Item = Pixel<Gray4>>> PixelSerializer<I> {
             area,
             pixels,
             row: 0,
-            /// 512 * 2 Bytes = 1kByte
+            // 512 * 2 Bytes = 1kByte
             max_entries: 512,
         }
     }

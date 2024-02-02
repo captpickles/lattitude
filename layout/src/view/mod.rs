@@ -72,7 +72,7 @@ where
             view,
             source,
             subscribers: vec![],
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
@@ -128,12 +128,9 @@ where
                 discriminant,
             }),
             PubSub::Unsubscribe(recipient, discriminant) => {
-                self.subscribers = self
+                self
                     .subscribers
-                    .iter()
-                    .filter(|e| (e.recipient != recipient) && (e.discriminant != discriminant))
-                    .cloned()
-                    .collect();
+                    .retain(|e| (e.recipient != recipient) && (e.discriminant != discriminant));
             }
         }
     }
