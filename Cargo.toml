@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-  "effigy",
-  "liein",
+  "pixelfield",
+  "layout",
   "lattitude",
   "it8951",
 ]

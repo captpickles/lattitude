@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 use chrono::{DateTime, Utc};
-use effigy::color::Gray16;
-use effigy::pixelfield::PixelField;
-use liein::view::View;
+use pixelfield::color::Gray16;
+use pixelfield::pixelfield::PixelField;
+use layout::view::View;
 use crate::integration::clock::CurrentDateTime;
 
 pub mod text;

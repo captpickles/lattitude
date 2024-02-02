@@ -1,7 +1,7 @@
 use actix::{Actor, Recipient};
 use enum_primitive_derive::Primitive;
-use liein::controller::periodic::{PeriodicActor, PeriodicController};
-use liein::model::{ModelActor, PubSub};
+use layout::controller::periodic::{PeriodicActor, PeriodicController};
+use layout::model::{ModelActor, PubSub};
 use crate::integration::clock::{Clock, CurrentDateTime};
 
 pub struct System {
@@ -29,9 +29,9 @@ mod test {
     use std::time::Duration;
     use actix::clock::sleep;
     use chrono::Timelike;
-    use effigy::color::Gray16;
-    use liein::canvas::{HorizontalAlign, VerticalAlign};
-    use liein::view::View;
+    use pixelfield::color::Gray16;
+    use layout::canvas::{Canvas, CanvasActor, HorizontalAlign, VerticalAlign};
+    use layout::view::{View, ViewActor};
     use crate::coordinator::{AddPage, Coordinator};
     use crate::display::bmp::BmpDisplay;
     use crate::display::Display;

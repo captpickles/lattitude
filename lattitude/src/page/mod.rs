@@ -1,9 +1,9 @@
 use std::sync::{Arc, Mutex};
 use actix::Recipient;
-use effigy::color::{Color, };
-use effigy::pixelfield::{PixelField, Point};
-use liein::canvas::{Canvas, CanvasActor, HorizontalAlign, VerticalAlign};
-use liein::view;
+use pixelfield::color::{Color, };
+use pixelfield::pixelfield::{PixelField, Point};
+use layout::canvas::{Canvas, CanvasActor, HorizontalAlign, VerticalAlign};
+use layout::view;
 
 pub mod main;
 

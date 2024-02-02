@@ -4,9 +4,9 @@ use std::sync::{Arc, Mutex};
 use ab_glyph::{Font, FontRef, PxScale};
 use actix::Message;
 use glyph_brush_layout::{BuiltInLineBreaker, FontId, GlyphPositioner, HorizontalAlign, Layout, SectionGeometry, SectionText, VerticalAlign};
-use effigy::color::Gray16;
-use effigy::pixelfield::{PixelField};
-use liein::view::View;
+use pixelfield::color::Gray16;
+use pixelfield::pixelfield::{PixelField};
+use layout::view::View;
 
 pub struct Text<I> {
     formatter: Box<dyn Fn(I) -> String>,

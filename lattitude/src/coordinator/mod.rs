@@ -5,10 +5,10 @@ use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 use actix::{Actor, AsyncContext, Context, Handler, Message, Recipient};
 use num_traits::{FromPrimitive, ToPrimitive};
-use effigy::color::Color;
-use effigy::pixelfield::PixelField;
-use liein::canvas::{Canvas, CanvasActor};
-use liein::view::{DiscriminantPixelField, PubSub};
+use pixelfield::color::Color;
+use pixelfield::pixelfield::PixelField;
+use layout::canvas::{Canvas, CanvasActor};
+use layout::view::{DiscriminantPixelField, PubSub};
 use crate::display::DisplayPixelField;
 
 

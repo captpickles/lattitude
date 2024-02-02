@@ -1,7 +1,7 @@
 use crate::model;
 use actix::{Actor, AsyncContext, Context, Handler, Message, Recipient};
-use effigy::color::Color;
-use effigy::pixelfield::PixelField;
+use pixelfield::color::Color;
+use pixelfield::pixelfield::PixelField;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};

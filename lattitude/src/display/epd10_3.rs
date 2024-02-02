@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
-use effigy::color::Gray16;
-use effigy::pixelfield::PixelField;
-use liein::canvas::Canvas;
+use pixelfield::color::Gray16;
+use pixelfield::pixelfield::PixelField;
+use layout::canvas::Canvas;
 use crate::display::Display;
 
 pub struct Vertical {

@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
-use effigy::color::Gray16;
-use effigy::pixelfield::PixelField;
+use pixelfield::color::Gray16;
+use pixelfield::pixelfield::PixelField;
 use enum_primitive_derive::Primitive;
-use liein::canvas::{Canvas};
+use layout::canvas::{Canvas};
 
 #[derive(Primitive)]
 pub enum MainPageComponents {

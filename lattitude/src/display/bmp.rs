@@ -1,8 +1,8 @@
 use std::env;
 use std::sync::{Arc, Mutex};
 use bmp::Pixel;
-use effigy::color::Color;
-use effigy::pixelfield::PixelField;
+use pixelfield::color::Color;
+use pixelfield::pixelfield::PixelField;
 use crate::display::Display;
 
 pub struct BmpDisplay {

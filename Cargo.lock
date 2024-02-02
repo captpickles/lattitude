@@ -246,16 +246,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
 
 [[package]]
-name = "effigy"
-version = "0.1.0"
-dependencies = [
- "bmp",
- "bytes",
- "strum",
- "strum_macros",
-]
-
-[[package]]
 name = "embedded-graphics"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -622,13 +612,25 @@ dependencies = [
  "actix",
  "bmp",
  "chrono",
- "effigy",
  "enum-primitive-derive",
  "glyph_brush_layout",
- "liein",
+ "layout",
  "num-traits",
+ "pixelfield",
  "reqwest",
  "serde",
+]
+
+[[package]]
+name = "layout"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "chrono",
+ "num-traits",
+ "pixelfield",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -642,18 +644,6 @@ name = "libc"
 version = "0.2.152"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13e3bf6590cbc649f4d1a3eefc9d5d6eb746f5200ffb04e5e142700b8faa56e7"
-
-[[package]]
-name = "liein"
-version = "0.1.0"
-dependencies = [
- "actix",
- "chrono",
- "effigy",
- "num-traits",
- "serde",
- "tokio",
-]
 
 [[package]]
 name = "linux-raw-sys"
@@ -875,6 +865,16 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pixelfield"
+version = "0.1.0"
+dependencies = [
+ "bmp",
+ "bytes",
+ "strum",
+ "strum_macros",
+]
 
 [[package]]
 name = "pkg-config"

@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 use actix::{Actor, Context, Handler, Message};
-use effigy::color::Color;
-use effigy::pixelfield::PixelField;
-use liein::canvas::Canvas;
+use pixelfield::color::Color;
+use pixelfield::pixelfield::PixelField;
+use layout::canvas::Canvas;
 
 pub mod bmp;
 pub mod epd10_3;

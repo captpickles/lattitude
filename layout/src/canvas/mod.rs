@@ -1,8 +1,8 @@
 use crate::view;
 use crate::view::{DiscriminantPixelField, PubSub, Subscriber};
 use actix::{Actor, AsyncContext, Context, Handler, Recipient};
-use effigy::color::Color;
-use effigy::pixelfield::PixelField;
+use pixelfield::color::Color;
+use pixelfield::pixelfield::PixelField;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
