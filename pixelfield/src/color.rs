@@ -96,9 +96,9 @@ impl From<Color> for Pixel {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Rgb {
-    r: u8,
-    g: u8,
-    b: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
 }
 
 impl From<Pixel> for Rgb {

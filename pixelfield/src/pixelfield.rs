@@ -87,6 +87,15 @@ impl Rectangle {
     }
 }
 
+impl From<((i32, i32), (i32, i32))> for Rectangle {
+    fn from((nw, se): ((i32, i32), (i32, i32))) -> Self {
+        Self {
+            nw: nw.into(),
+            se: se.into(),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Dimensions {
     width: u32,

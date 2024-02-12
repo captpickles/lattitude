@@ -5,7 +5,7 @@ use engine::page::Page;
 use engine::view::canvas::Canvas;
 use engine::view::pixels::Pixels;
 use engine::view::rotate::Rotate;
-use engine::view::text::Text;
+use engine::view::text::{Source, Text};
 use pixelfield::pixelfield::{Rectangle, Rotation};
 use crate::art::{Art, build_art_registry};
 use crate::font::{build_font_registry, Font};
@@ -29,15 +29,12 @@ async fn main() -> Result<(), anyhow::Error> {
     );
 
     splash.place(
-        (200, 200),
+        (200, 800),
         Text::new(
-            Rectangle {
-                nw: (0,0).into(),
-                se: (300, 100).into()
-            },
+            ((0,0), (300,100)).into(),
             font.get(Font::Typewriter),
             36.0,
-            Some("Låttitüdé".to_string())
+            Source::Static("Låttitüdé".to_string())
         )
     );
 

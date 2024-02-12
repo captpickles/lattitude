@@ -29,5 +29,3 @@ pub enum VerticalAlignment {
 pub trait Renderable : Send + Sync {
     fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output=Option<PixelField>> +'r >>;
 }
-
-
