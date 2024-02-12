@@ -1,8 +1,10 @@
 use crate::view::Renderable;
+use bmp::BmpError;
 use pixelfield::image::bmp_from_reader;
 use pixelfield::pixelfield::PixelField;
+use std::future::Future;
 use std::io::Read;
-use bmp::BmpError;
+use std::pin::Pin;
 
 #[derive(Clone)]
 pub struct Pixels {
@@ -10,11 +12,8 @@ pub struct Pixels {
 }
 
 impl Pixels {
-
     pub fn from_pixel_field(pixel_field: PixelField) -> Pixels {
-        Pixels {
-            inner: pixel_field
-        }
+        Pixels { inner: pixel_field }
     }
 
     pub fn from_bmp<R: Read>(reader: &mut R) -> Result<Pixels, BmpError> {
@@ -23,7 +22,7 @@ impl Pixels {
 }
 
 impl Renderable for Pixels {
-    fn render(&self) -> Option<PixelField> {
-        Some(self.inner.clone())
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r >> {
+        Box::pin(async move { Some(self.inner.clone()) })
     }
 }

@@ -1,8 +1,10 @@
+use std::future::Future;
 use crate::view::canvas::Canvas;
 use crate::view::Renderable;
 use pixelfield::color::Color;
 use pixelfield::pixelfield::PixelField;
 use std::marker::PhantomData;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::task::spawn_blocking;
 
@@ -19,13 +21,21 @@ impl Page {
         }
     }
 
-    pub async fn render(&self) -> PixelField {
+    pub fn render<'m>(&'m self) -> Pin<Box<dyn Future<Output=PixelField> + 'm >> {
+        /*
         let canvas = self.canvas.clone();
         spawn_blocking(move || canvas.render())
             .await
             .ok()
             .unwrap_or_default()
             .unwrap_or_default()
+
+         */
+        Box::pin(
+            async move {
+                self.canvas.render().await.unwrap_or_default()
+            }
+        )
     }
 }
 

@@ -1,5 +1,7 @@
-use pixelfield::pixelfield::PixelField;
 use crate::view::Renderable;
+use pixelfield::pixelfield::PixelField;
+use std::future::Future;
+use std::pin::Pin;
 
 pub struct Scale<R: Renderable> {
     inner: R,
@@ -7,19 +9,18 @@ pub struct Scale<R: Renderable> {
 }
 
 impl<R: Renderable> Scale<R> {
-
     pub fn new(inner: R, scale: f32) -> Self {
-        Self {
-            inner,
-            scale,
-        }
+        Self { inner, scale }
     }
 }
 
 impl<R: Renderable> Renderable for Scale<R> {
-    fn render(&self) -> Option<PixelField> {
-        self.inner.render().map(|inner| {
-            inner.scale(self.scale)
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+        Box::pin(async move {
+            self.inner
+                .render()
+                .await
+                .map(|inner| inner.scale(self.scale))
         })
     }
 }

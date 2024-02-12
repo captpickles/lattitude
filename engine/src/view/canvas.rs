@@ -1,5 +1,7 @@
 use crate::view::{HorizontalAlignment, Renderable, VerticalAlignment};
 use pixelfield::pixelfield::{Pixel, PixelField, Point, Rectangle};
+use std::future::Future;
+use std::pin::Pin;
 
 pub struct Canvas {
     components: Vec<Component>,
@@ -30,23 +32,25 @@ pub struct Component {
 }
 
 impl Renderable for Canvas {
-    fn render(&self) -> Option<PixelField> {
-        let mut pixel_field = PixelField::default();
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r >> {
+        Box::pin(async move {
+            let mut pixel_field = PixelField::default();
 
-        for component in &self.components {
-            if let Some(rendered) = component.renderable.render() {
-                for pixel in rendered.iter() {
-                    pixel_field.set(
-                        (
-                            pixel.point().x + component.point.x,
-                            pixel.point().y + component.point.y,
-                        ),
-                        pixel.color(),
-                    );
+            for component in &self.components {
+                if let Some(rendered) = component.renderable.render().await {
+                    for pixel in rendered.iter() {
+                        pixel_field.set(
+                            (
+                                pixel.point().x + component.point.x,
+                                pixel.point().y + component.point.y,
+                            ),
+                            pixel.color(),
+                        );
+                    }
                 }
             }
-        }
 
-        Some(pixel_field)
+            Some(pixel_field)
+        })
     }
 }

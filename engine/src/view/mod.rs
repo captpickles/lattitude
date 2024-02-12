@@ -3,6 +3,7 @@ use actix::dev::{MessageResponse, OneshotSender};
 use actix::{Actor, Context, ContextFutureSpawner, Handler, Message, MessageResult, Recipient, ResponseActFuture, WrapFuture};
 use pixelfield::pixelfield::{PixelField, Rectangle};
 use std::future::{Future, IntoFuture};
+use std::pin::Pin;
 use std::rc::Rc;
 use tokio::sync::oneshot::Sender;
 
@@ -26,7 +27,7 @@ pub enum VerticalAlignment {
 }
 
 pub trait Renderable : Send + Sync {
-    fn render(&self) -> Option<PixelField>;
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output=Option<PixelField>> +'r >>;
 }
 
 

@@ -41,7 +41,7 @@ where
 
 pub trait ManageableController {
     fn configure(&self, configuration: toml::Value);
-    fn update(&self);
+    fn update(&self) -> Box<dyn Future<Output=()>>;
 }
 
 impl<C, Configuration, Output> ManageableController for ControllerManager<C, Configuration, Output>
@@ -62,10 +62,18 @@ where
         });
     }
 
-    fn update(&self) {
+    fn update(&self) -> Box<dyn Future<Output=()>>{
         let controller = self.controller.clone();
         let state = self.state.clone();
 
+        Box::new(
+            async move {
+                let v = controller.lock().await.update().await;
+
+            }
+        )
+
+        /*
         tokio::spawn(async move {
             let new_state = controller.lock().await.update().await;
             let mut cur_state = state.lock().await;
@@ -91,6 +99,8 @@ where
             }
              */
         });
+
+         */
     }
 }
 

@@ -24,7 +24,7 @@ async fn main() -> Result<(), anyhow::Error> {
         (0,0),
         Rotate::new(
             art.get( Art::Logo ),
-            Rotation::Clockwise(15.0),
+            Rotation::Clockwise(25.0),
         )
     );
 

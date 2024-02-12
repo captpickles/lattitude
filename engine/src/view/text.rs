@@ -1,3 +1,5 @@
+use std::future::Future;
+use std::pin::Pin;
 use crate::view::Renderable;
 use ab_glyph::FontRef;
 use pixelfield::pixelfield::{PixelField, Rectangle};
@@ -28,12 +30,16 @@ impl Text {
 }
 
 impl Renderable for Text {
-    fn render(&self) -> Option<PixelField> {
-        if let Some(value) = &self.value {
-            self.render(value)
-        } else {
-            None
-        }
+    fn render<'m>(&'m self) -> Pin<Box<dyn Future<Output=Option<PixelField>> + 'm >> {
+        Box::pin(
+            async move {
+                if let Some(value) = &self.value {
+                    self.render(value)
+                } else {
+                    None
+                }
+            }
+        )
     }
 }
 
@@ -71,12 +77,19 @@ where
     Input: Clone + Send,
     FnIn: From<Input> + Send,
 {
-    fn render(&self) -> Option<PixelField> {
-        if let Some(locked) = &*self.state.blocking_lock() {
-            let s = (self.formatter)(locked.clone().into());
-            self.text.render(&s)
-        } else {
-            None
-        }
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output=Option<PixelField>> + 'r>> {
+        Box::pin(
+            async move {
+                if let Some(locked) = &*self.state.lock().await {
+                    let s = (self.formatter)(locked.clone().into());
+                    self.text.render(&s)
+                } else {
+                    None
+                }
+
+            }
+
+        )
+
     }
 }
