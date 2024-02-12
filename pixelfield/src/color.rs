@@ -1,8 +1,9 @@
-use std::fmt::Debug;
 use bmp::Pixel;
+use std::fmt::Debug;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+/*
 pub trait Color: Copy + Clone + IntoEnumIterator + PartialEq + Debug + Unpin + Send + 'static {
     const BITS_PER_PIXEL: u8;
     const BLACK: Self;
@@ -55,7 +56,7 @@ pub trait Color: Copy + Clone + IntoEnumIterator + PartialEq + Debug + Unpin + S
                 }
             }
         }
-        
+
         Pixel {
             r: 0,
             g: 0,
@@ -67,7 +68,57 @@ pub trait Color: Copy + Clone + IntoEnumIterator + PartialEq + Debug + Unpin + S
         let pixel = self.as_pixel();
         M::from_pixel(pixel)
     }
-    
+
+}
+
+ */
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Color {
+    Rgb(Rgb),
+    Binary(BlackAndWhite),
+    Gray4(Gray4),
+    Gray8(Gray8),
+    Gray16(Gray16),
+}
+
+impl From<Color> for Pixel {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::Rgb(inner) => inner.into(),
+            Color::Binary(inner) => inner.into(),
+            Color::Gray4(inner) => inner.into(),
+            Color::Gray8(inner) => inner.into(),
+            Color::Gray16(inner) => inner.into(),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Rgb {
+    r: u8,
+    g: u8,
+    b: u8,
+}
+
+impl From<Pixel> for Rgb {
+    fn from(value: Pixel) -> Self {
+        Self {
+            r: value.r,
+            g: value.g,
+            b: value.b,
+        }
+    }
+}
+
+impl From<Rgb> for Pixel {
+    fn from(value: Rgb) -> Self {
+        Self {
+            r: value.r,
+            g: value.g,
+            b: value.b,
+        }
+    }
 }
 
 #[repr(u8)]
@@ -77,13 +128,16 @@ pub enum BlackAndWhite {
     White,
 }
 
-impl Color for BlackAndWhite {
-    const BITS_PER_PIXEL: u8 = 1;
-    const BLACK: Self = Self::Black;
-    const WHITE: Self = Self::White;
-
-    fn pixel_cutpoints() -> Vec<u8> {
-        vec![254,255]
+impl From<BlackAndWhite> for Pixel {
+    fn from(value: BlackAndWhite) -> Self {
+        match value {
+            BlackAndWhite::Black => Pixel { r: 0, g: 0, b: 0 },
+            BlackAndWhite::White => Pixel {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
+        }
     }
 }
 
@@ -96,14 +150,31 @@ pub enum Gray4 {
     White,
 }
 
-impl Color for Gray4 {
-    const BITS_PER_PIXEL: u8 = 2;
-    const BLACK: Self = Self::Black;
-    const WHITE: Self = Self::White;
+impl From<Gray4> for Pixel {
+    fn from(value: Gray4) -> Self {
+        match value {
+            Gray4::Black => Pixel { r: 0, g: 0, b: 0 },
+            Gray4::Gray1 => Pixel {
+                r: 86,
+                g: 86,
+                b: 86,
+            },
+            Gray4::Gray2 => Pixel {
+                r: 171,
+                g: 171,
+                b: 171,
+            },
+            Gray4::White => Pixel {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
+        }
+    }
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Gray8 {
     Black,
     Gray1,
@@ -113,6 +184,49 @@ pub enum Gray8 {
     Gray5,
     Gray6,
     White,
+}
+
+impl From<Gray8> for Pixel {
+    fn from(value: Gray8) -> Self {
+        match value {
+            Gray8::Black => Pixel { r: 0, g: 0, b: 0 },
+            Gray8::Gray1 => Pixel {
+                r: 36,
+                g: 36,
+                b: 36,
+            },
+            Gray8::Gray2 => Pixel {
+                r: 72,
+                g: 72,
+                b: 72,
+            },
+            Gray8::Gray3 => Pixel {
+                r: 108,
+                g: 108,
+                b: 108,
+            },
+            Gray8::Gray4 => Pixel {
+                r: 144,
+                g: 144,
+                b: 144,
+            },
+            Gray8::Gray5 => Pixel {
+                r: 180,
+                g: 180,
+                b: 180,
+            },
+            Gray8::Gray6 => Pixel {
+                r: 216,
+                g: 216,
+                b: 216,
+            },
+            Gray8::White => Pixel {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
+        }
+    }
 }
 
 #[repr(u8)]
@@ -136,109 +250,85 @@ pub enum Gray16 {
     White,
 }
 
-impl Color for Gray16 {
-    const BITS_PER_PIXEL: u8 = 4;
-    const BLACK: Self = Self::Black;
-    const WHITE: Self = Self::White;
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_as_pixel_gray4() {
-        let pixel = Gray4::White.as_pixel();
-
-        assert_eq!(pixel.r, 255);
-        assert_eq!(pixel.g, 255);
-        assert_eq!(pixel.b, 255);
-
-        let pixel = Gray4::Gray2.as_pixel();
-
-        assert_eq!(pixel.r, 170);
-        assert_eq!(pixel.g, 170);
-        assert_eq!(pixel.b, 170);
-
-        let pixel = Gray4::Gray1.as_pixel();
-
-        assert_eq!(pixel.r, 85);
-        assert_eq!(pixel.g, 85);
-        assert_eq!(pixel.b, 85);
-
-        let pixel = Gray4::Black.as_pixel();
-
-        assert_eq!(pixel.r, 0);
-        assert_eq!(pixel.g, 0);
-        assert_eq!(pixel.b, 0);
+impl From<Gray16> for Pixel {
+    fn from(value: Gray16) -> Self {
+        match value {
+            Gray16::Black => Pixel { r: 0, g: 0, b: 0 },
+            Gray16::Gray1 => Pixel {
+                r: 17,
+                g: 17,
+                b: 17,
+            },
+            Gray16::Gray2 => Pixel {
+                r: 34,
+                g: 34,
+                b: 34,
+            },
+            Gray16::Gray3 => Pixel {
+                r: 51,
+                g: 51,
+                b: 51,
+            },
+            Gray16::Gray4 => Pixel {
+                r: 68,
+                g: 68,
+                b: 68,
+            },
+            Gray16::Gray5 => Pixel {
+                r: 85,
+                g: 85,
+                b: 85,
+            },
+            Gray16::Gray6 => Pixel {
+                r: 102,
+                g: 102,
+                b: 102,
+            },
+            Gray16::Gray7 => Pixel {
+                r: 119,
+                g: 119,
+                b: 119,
+            },
+            Gray16::Gray8 => Pixel {
+                r: 136,
+                g: 136,
+                b: 136,
+            },
+            Gray16::Gray9 => Pixel {
+                r: 153,
+                g: 153,
+                b: 153,
+            },
+            Gray16::Gray10 => Pixel {
+                r: 170,
+                g: 170,
+                b: 170,
+            },
+            Gray16::Gray11 => Pixel {
+                r: 187,
+                g: 187,
+                b: 187,
+            },
+            Gray16::Gray12 => Pixel {
+                r: 204,
+                g: 204,
+                b: 204,
+            },
+            Gray16::Gray13 => Pixel {
+                r: 221,
+                g: 221,
+                b: 221,
+            },
+            Gray16::Gray14 => Pixel {
+                r: 238,
+                g: 238,
+                b: 238,
+            },
+            Gray16::White => Pixel {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
+        }
     }
-
-    #[test]
-    fn test_from_pixel_gray4() {
-        let pixel = Pixel {
-            r: 0,
-            g: 0,
-            b: 0,
-        };
-
-        let color = Gray4::from_pixel(pixel);
-        assert_eq!( Gray4::Black, color);
-
-        let pixel = Pixel {
-            r: 170,
-            g: 170,
-            b: 170,
-        };
-
-        let color = Gray4::from_pixel(pixel);
-        assert_eq!(Gray4::Gray2, color);
-
-        let pixel = Pixel {
-            r: 255,
-            g: 255,
-            b: 255,
-        };
-
-        let color = Gray4::from_pixel(pixel);
-        assert_eq!(Gray4::White, color);
-    }
-
-    #[test]
-    fn black_and_white() {
-        let pixel = Pixel {
-            r: 0,
-            g: 0,
-            b: 0,
-        };
-
-        let color = BlackAndWhite::from_pixel(pixel);
-        assert_eq!(color, BlackAndWhite::Black);
-
-        let pixel = Pixel {
-            r: 255,
-            g: 255,
-            b: 255,
-        };
-
-        let color = BlackAndWhite::from_pixel(pixel);
-        assert_eq!(color, BlackAndWhite::White);
-
-        let pixel = Pixel {
-            r: 250,
-            g: 250,
-            b: 250,
-        };
-
-        let color = BlackAndWhite::from_pixel(pixel);
-        assert_eq!(color, BlackAndWhite::Black);
-    }
-
-    #[test]
-    fn map() {
-        let color = Gray16::Gray10;
-        let color : Gray4 = color.map();
-
-        assert_eq!(color, Gray4::Gray2);
-    }
-
 }

@@ -1,9 +1,10 @@
+use crate::color::Color;
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::ops::{Mul, Range};
-use crate::color::Color;
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
@@ -11,10 +12,7 @@ pub struct Point {
 
 impl From<(i32, i32)> for Point {
     fn from((x, y): (i32, i32)) -> Self {
-        Self {
-            x,
-            y,
-        }
+        Self { x, y }
     }
 }
 
@@ -29,8 +27,8 @@ impl From<(u32, u32)> for Point {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Rectangle {
-    nw: Point,
-    se: Point,
+    pub nw: Point,
+    pub se: Point,
 }
 
 impl Rectangle {
@@ -63,19 +61,19 @@ impl Rectangle {
                         y: self.nw.y + dimensions.height as i32,
                     },
                 }
-            }
+            },
             Ordering::Equal => {
                 *self
-            }
+            },
             Ordering::Greater => {
                 Rectangle {
                     nw: self.nw,
                     se: Point {
                         x: self.nw.y + dimensions.width as i32,
-                        y: self.nw.y + dimensions.height as i32,
+                        y: self.nw.y + dimensions.width as i32,
                     },
                 }
-            }
+            },
         }
     }
 
@@ -83,8 +81,8 @@ impl Rectangle {
         let dimensions = self.dimensions();
 
         Point {
-            x: self.se.x + ((dimensions.width as i32 - 1) / 2),
-            y: self.se.y + ((dimensions.height as i32 - 1) / 2),
+            x: self.nw.x + ((dimensions.width as i32 - 1) / 2),
+            y: self.nw.y + ((dimensions.height as i32 - 1) / 2),
         }
     }
 }
@@ -127,10 +125,7 @@ impl From<Rectangle> for Dimensions {
 
 impl From<(u32, u32)> for Dimensions {
     fn from((width, height): (u32, u32)) -> Self {
-        Dimensions {
-            width,
-            height,
-        }
+        Dimensions { width, height }
     }
 }
 
@@ -153,12 +148,8 @@ impl Rotation {
 impl Rotation {
     pub fn as_degrees(&self) -> f32 {
         match self {
-            Rotation::Clockwise(degrees) => {
-                *degrees
-            }
-            Rotation::CounterClockwise(degrees) => {
-                *degrees + -1.0
-            }
+            Rotation::Clockwise(degrees) => *degrees,
+            Rotation::CounterClockwise(degrees) => *degrees + -1.0,
         }
     }
 
@@ -168,39 +159,44 @@ impl Rotation {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Pixel<C: Color> {
+pub struct Pixel {
     point: Point,
-    color: C,
+    color: Color,
 }
 
-impl<C:Color> Pixel<C> {
+impl Pixel {
     pub fn point(&self) -> Point {
         self.point
     }
 
-    pub fn color(&self) -> C {
+    pub fn color(&self) -> Color {
         self.color
     }
-
 }
 
 #[derive(Clone)]
-pub struct PixelField<C: Color> {
-    pixels: Vec<Pixel<C>>,
+pub struct PixelField {
+    //pixels: Vec<Pixel>,
+    pixels: HashMap<Point, Color>
 }
 
-impl<C: Color> Default for PixelField<C> {
+impl Default for PixelField {
     fn default() -> Self {
+        //Self { pixels: vec![] }
         Self {
-            pixels: vec![],
+            pixels: HashMap::default()
         }
     }
 }
 
-impl<C: Color> PixelField<C> {
-
-    pub fn iter(&self) -> impl Iterator<Item=&Pixel<C>> {
-        self.pixels.iter()
+impl PixelField {
+    pub fn iter(&self) -> impl Iterator<Item = Pixel> + '_ {
+        self.pixels.iter().map(|(point, color)| {
+            Pixel {
+                point:  *point,
+                color: *color,
+            }
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -211,37 +207,16 @@ impl<C: Color> PixelField<C> {
         self.pixels.is_empty()
     }
 
-    pub fn set<P: Into<Point>>(&mut self, point: P, color: C) {
+    pub fn set<P: Into<Point>>(&mut self, point: P, color: Color) {
         let point = point.into();
-        if let Some(pixel) = self.find_pixel_mut(point) {
-            pixel.color = color;
-        } else {
-            self.pixels.push(
-                Pixel {
-                    point,
-                    color,
-                }
-            )
-        }
+        self.pixels.insert(point, color);
     }
 
-    pub fn get<P: Into<Point>>(&self, point: P) -> Option<C> {
-        self.find_pixel(point).map(|inner| inner.color)
+    pub fn get<P: Into<Point>>(&self, point: P) -> Option<Color> {
+        let point = point.into();
+        self.pixels.get(&point).cloned()
     }
 
-    fn find_pixel<P: Into<Point>>(&self, point: P) -> Option<Pixel<C>> {
-        let point = point.into();
-        self.pixels.iter().find(|e| {
-            e.point == point
-        }).cloned()
-    }
-
-    fn find_pixel_mut<P: Into<Point>>(&mut self, point: P) -> Option<&mut Pixel<C>> {
-        let point = point.into();
-        self.pixels.iter_mut().find(|e| {
-            e.point == point
-        })
-    }
 
     pub fn bounding_box(&self) -> Rectangle {
         let mut min_x = i32::MAX;
@@ -250,18 +225,18 @@ impl<C: Color> PixelField<C> {
         let mut max_x = i32::MIN;
         let mut max_y = i32::MIN;
 
-        for pixel in &self.pixels {
-            if pixel.point.x < min_x {
-                min_x = pixel.point.x
+        for point in self.pixels.keys() {
+            if point.x < min_x {
+                min_x = point.x;
             }
-            if pixel.point.x > max_x {
-                max_x = pixel.point.x
+            if point.x > max_x {
+                max_x = point.x;
             }
-            if pixel.point.y < min_y {
-                min_y = pixel.point.y
+            if point.y < min_y {
+                min_y = point.y;
             }
-            if pixel.point.y > max_y {
-                max_y = pixel.point.y
+            if point.y > max_y {
+                max_y = point.y;
             }
         }
 
@@ -275,16 +250,17 @@ impl<C: Color> PixelField<C> {
         self.bounding_box().dimensions()
     }
 
-    pub fn rotate(&self, rotation: Rotation) -> PixelField<C> {
+    pub fn rotate(&self, rotation: Rotation) -> PixelField {
         let radians = rotation.as_radians();
 
         // The bbox of the original image
         let original_bbox = self.bounding_box();
 
         // inflated to be a square to allow rotation
-        let scaled_bbox = original_bbox.bounding_square();
+        let rotated_bbox = original_bbox.bounding_square();
+        println!("rotated bbox : {:?}", rotated_bbox);
 
-        let mut rotated = PixelField::<C>::default();
+        let mut rotated = PixelField::default();
 
         let cos = radians.cos();
         let sin = radians.sin();
@@ -293,10 +269,13 @@ impl<C: Color> PixelField<C> {
         let center = original_bbox.center_point();
 
         //let original_dimensions = original_bbox.dimensions();
-        let rotated_dimensions = scaled_bbox.dimensions();
+        let rotated_dimensions = rotated_bbox.dimensions();
 
-        for x in scaled_bbox.nw.x..scaled_bbox.se.x {
-            for y in scaled_bbox.nw.y..scaled_bbox.se.y {
+        println!("rotated dims : {:?}", rotated_dimensions);
+
+
+        for x in rotated_bbox.nw.x..=rotated_bbox.se.x {
+            for y in rotated_bbox.nw.y..=rotated_bbox.se.y {
                 let ox = (cos * (x as f32 - center.x as f32)
                     + (sin * (y as f32 - center.y as f32))
                     + rotated_dimensions.width() as f32 / 2.0) as u32;
@@ -312,7 +291,7 @@ impl<C: Color> PixelField<C> {
         rotated
     }
 
-    pub fn scale(&self, scale: f32) -> PixelField<C> {
+    pub fn scale(&self, scale: f32) -> PixelField {
         let original_bbox = self.bounding_box();
         let scaled_dimensions = original_bbox.dimensions() * scale;
 
@@ -332,14 +311,13 @@ impl<C: Color> PixelField<C> {
         scaled
     }
 
-    pub fn trim(&self, background: C) -> PixelField<C> {
+    pub fn trim(&self, background: Color) -> PixelField {
         let original_bbox = self.bounding_box();
 
         let mut nw = original_bbox.nw;
         let mut se = original_bbox.se;
 
-        'outer:
-        for x in original_bbox.x_range() {
+        'outer: for x in original_bbox.x_range() {
             for y in original_bbox.y_range() {
                 if let Some(color) = self.get((x, y)) {
                     if color != background {
@@ -350,8 +328,7 @@ impl<C: Color> PixelField<C> {
             }
         }
 
-        'outer:
-        for x in original_bbox.x_range().rev() {
+        'outer: for x in original_bbox.x_range().rev() {
             for y in original_bbox.y_range() {
                 if let Some(color) = self.get((x, y)) {
                     if color != background {
@@ -362,8 +339,7 @@ impl<C: Color> PixelField<C> {
             }
         }
 
-        'outer:
-        for y in original_bbox.y_range() {
+        'outer: for y in original_bbox.y_range() {
             for x in original_bbox.x_range() {
                 if let Some(color) = self.get((x, y)) {
                     if color != background {
@@ -374,8 +350,7 @@ impl<C: Color> PixelField<C> {
             }
         }
 
-        'outer:
-        for y in original_bbox.y_range().rev() {
+        'outer: for y in original_bbox.y_range().rev() {
             for x in original_bbox.x_range() {
                 if let Some(color) = self.get((x, y)) {
                     if color != background {
@@ -386,17 +361,117 @@ impl<C: Color> PixelField<C> {
             }
         }
 
-        let trimmed_bbox = Rectangle {
-            nw,
-            se,
-        };
+        let trimmed_bbox = Rectangle { nw, se };
 
         PixelField {
-            pixels: self.pixels.iter().filter(|e| {
-                trimmed_bbox.contains(e.point)
-            })
-                .cloned()
-                .collect()
+            pixels: self
+                .pixels
+                .iter()
+                .filter(|(point, _color)| trimmed_bbox.contains(**point))
+                .map(|(point, color)| {
+                    (*point, *color)
+                })
+                .collect(),
         }
     }
+
+    pub fn to_bmp(&self) -> bmp::Image {
+        let bbox = self.bounding_box();
+
+        let x_adjustment = if bbox.x_range().start < 0 {
+            bbox.x_range().start.abs()
+        } else {
+            0
+        };
+
+        let y_adjustment = if bbox.y_range().start < 0 {
+            bbox.y_range().start.abs()
+        } else {
+            0
+        };
+
+        let mut bmp = bmp::Image::new((bbox.x_range().end + x_adjustment + 1) as u32, (bbox.y_range().end + y_adjustment + 1) as u32);
+
+        for x in 0..bmp.get_width() {
+            for y in 0..bmp.get_height() {
+                bmp.set_pixel(x, y, bmp::Pixel {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                });
+
+            }
+
+        }
+
+        for pixel in self.iter() {
+            bmp.set_pixel(
+                (pixel.point.x + x_adjustment) as u32,
+                (pixel.point.y + y_adjustment) as u32,
+                pixel.color.into(),
+            )
+        }
+
+        bmp
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use crate::pixelfield::Rectangle;
+
+    #[test]
+    fn origin_bbox_to_dimensions() {
+        let rect = Rectangle {
+            nw: (0,0).into(),
+            se: (100,200).into(),
+        };
+
+        let dims = rect.dimensions();
+
+        assert_eq!(100, dims.width);
+        assert_eq!(200, dims.height);
+    }
+
+    #[test]
+    fn origin_bbox_to_center() {
+        let rect = Rectangle {
+            nw: (0,0).into(),
+            se: (100,200).into(),
+        };
+
+        let point = rect.center_point();
+
+        assert_eq!(49, point.x);
+        assert_eq!(99, point.y);
+    }
+
+    #[test]
+    fn offset_bbox_to_dimensions() {
+        let rect = Rectangle {
+            nw: (20,20).into(),
+            se: (100,200).into(),
+        };
+
+        let dims = rect.dimensions();
+
+        assert_eq!(80, dims.width);
+        assert_eq!(180, dims.height);
+    }
+
+    #[test]
+    fn bounding_square() {
+
+        let rect = Rectangle {
+            nw: (8,6).into(),
+            se: (493, 387).into()
+        };
+
+        let square = rect.bounding_square();
+
+        println!("{:#?}",square.dimensions());
+
+    }
+
 }

@@ -1,14 +1,17 @@
 [package]
-name = "layout"
+name = "engine"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+actix = "0.13.3"
+serde = "1.0.196"
 pixelfield = { path = "../pixelfield" }
-tokio = {  version = "1.35.1", features = ["full"] }
-actix = { version = "0.13.1", features = ["macros"] }
-serde = "1.0.195"
-chrono = "0.4.31"
-num-traits = "0.2.17"
+tokio = { version = "1.36.0", features = ["full"] }
+ab_glyph = "0.2.23"
+glyph_brush_layout = "0.2.3"
+toml = "0.8.10"
+bmp = "0.5.0"
+
