@@ -12,17 +12,39 @@ impl Canvas {
         Self { components: vec![] }
     }
 
-    pub fn place<P: Into<Point>>(&mut self, point: P, renderable: impl Renderable + 'static) {
+    pub fn place<P: Into<Point>>(
+        &mut self, point: P,
+        horizontal_alignment: HorizontalAlignment,
+        vertical_alignment: VerticalAlignment,
+        renderable: impl Renderable + 'static
+    ) {
         let component = Component {
             point: point.into(),
-            horizontal_alignment: HorizontalAlignment::Left,
-            vertical_alignment: VerticalAlignment::Top,
+            horizontal_alignment,
+            vertical_alignment,
             renderable: Box::new(renderable),
         };
 
         self.components.push(component);
     }
 }
+
+
+
+impl Renderable for Canvas {
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r >> {
+        Box::pin(async move {
+            let mut pixel_field = PixelField::default();
+
+            for component in &self.components {
+                component.render(&mut pixel_field).await;
+            }
+
+            Some(pixel_field)
+        })
+    }
+}
+
 
 pub struct Component {
     point: Point,
@@ -31,26 +53,49 @@ pub struct Component {
     renderable: Box<dyn Renderable>,
 }
 
-impl Renderable for Canvas {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r >> {
-        Box::pin(async move {
-            let mut pixel_field = PixelField::default();
+impl Component {
 
-            for component in &self.components {
-                if let Some(rendered) = component.renderable.render().await {
-                    for pixel in rendered.iter() {
-                        pixel_field.set(
-                            (
-                                pixel.point().x + component.point.x,
-                                pixel.point().y + component.point.y,
-                            ),
-                            pixel.color(),
-                        );
-                    }
+    pub async fn render(&self, pixel_field: &mut PixelField) {
+        if let Some(rendered) = self.renderable.render().await {
+
+            let dimensions = rendered.dimensions();
+
+            let x_offset = match self.horizontal_alignment {
+                HorizontalAlignment::Left => {
+                    self.point.x
                 }
-            }
+                HorizontalAlignment::Center => {
+                    self.point.x - (dimensions.width() as i32 /2)
 
-            Some(pixel_field)
-        })
+                }
+                HorizontalAlignment::Right => {
+                    self.point.x - dimensions.width() as i32
+                }
+            };
+
+            let y_offset = match self.vertical_alignment {
+                VerticalAlignment::Top => {
+                    self.point.y
+                }
+                VerticalAlignment::Middle => {
+                    self.point.y - (dimensions.height() as i32 /2)
+                }
+                VerticalAlignment::Bottom => {
+                    self.point.y - dimensions.height() as i32
+                }
+            };
+
+            for pixel in rendered.iter() {
+                pixel_field.set(
+                    (
+                        pixel.point().x + x_offset,
+                        pixel.point().y + y_offset
+                    ),
+                    pixel.color(),
+                );
+            }
+        }
+
     }
+
 }

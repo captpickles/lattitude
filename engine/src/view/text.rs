@@ -15,7 +15,7 @@ pub enum Source {
 }
 
 pub struct Text {
-    bbox: Rectangle,
+    width: u32,
     font: FontRef<'static>,
     size: f32,
     //value: Option<String>,
@@ -23,16 +23,16 @@ pub struct Text {
 }
 
 impl Text {
-    pub fn new(bbox: Rectangle, font: FontRef<'static>, size: f32, source: Source) -> Self {
+    pub fn new(width: u32, font: FontRef<'static>, size: f32, source: Source) -> Self {
         Self {
-            bbox,
+            width,
             font,
             size,
             source,
         }
     }
 
-    pub fn render(&self, text: &str) -> Option<PixelField> {
+    fn render_text(&self, text: &str) -> Option<PixelField> {
         let scale = PxScale::from(self.size);
 
         let layout = Layout::Wrap {
@@ -41,8 +41,8 @@ impl Text {
             v_align: VerticalAlign::Top,
         };
 
-        let screen_position = (self.bbox.nw.x as f32 , self.bbox.nw.y as f32);
-        let bounds = (self.bbox.se.x as f32, self.bbox.se.y as f32);
+        let screen_position = (0.0, 0.0);
+        let bounds = (self.width as f32, f32::INFINITY);
 
         let glpyhs = layout.calculate_glyphs(
             &[self.font.clone()],
@@ -61,13 +61,13 @@ impl Text {
         let mut pixel_field = PixelField::default();
 
         for glyph in &glpyhs {
-            self.glyph(&mut pixel_field, glyph);
+            self.render_glyph(&mut pixel_field, glyph);
         }
 
         Some(pixel_field)
     }
 
-    fn glyph(&self, pixel_field: &mut PixelField, glyph: &SectionGlyph) {
+    fn render_glyph(&self, pixel_field: &mut PixelField, glyph: &SectionGlyph) {
         if let Some(glyph) = self.font.outline_glyph(glyph.glyph.clone()) {
             let x_offset = glyph.px_bounds().min.x;
             let y_offset = glyph.px_bounds().min.y;
@@ -109,7 +109,7 @@ impl Renderable for Text {
             };
 
             if let Some(text) = text {
-                self.render(&text)
+                self.render_text(&text)
             } else {
                 None
             }
@@ -121,8 +121,9 @@ pub struct FormattedText<Input, FnIn>
 where
     FnIn: From<Input> + Send,
 {
-    formatter: Box<dyn Fn(FnIn) -> String + Send + Sync>,
-    state: Arc<Mutex<Option<Input>>>,
+    formatter: Box<dyn Fn(FnIn) -> Option<String> + Send + Sync>,
+    input_state: Arc<Mutex<Option<Input>>>,
+    output_state: Arc<Mutex<Option<String>>>,
     text: Text,
 }
 
@@ -131,17 +132,19 @@ where
     Input: Clone + Send,
     FnIn: From<Input> + Send,
 {
-    pub fn new<F: Fn(FnIn) -> String + Send + Sync + 'static>(
+    pub fn new<F: Fn(FnIn) -> Option<String> + Send + Sync + 'static>(
         state: Arc<Mutex<Option<Input>>>,
-        bbox: Rectangle,
+        width: u32,
         font: FontRef<'static>,
         size: f32,
         formatter: F,
     ) -> Self {
+        let output_state = Arc::new(Mutex::new(None));
         Self {
             formatter: Box::new(formatter),
-            state: state.clone(),
-            text: Text::new(bbox, font, size, Source::Static("howdy".to_string())),
+            input_state: state.clone(),
+            output_state: output_state.clone(),
+            text: Text::new(width, font, size, Source::Dynamic(output_state.clone())),
         }
     }
 }
@@ -153,10 +156,15 @@ where
 {
     fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
-            if let Some(locked) = &*self.state.lock().await {
+            if let Some(locked) = &*self.input_state.lock().await {
+                println!("some state");
                 let s = (self.formatter)(locked.clone().into());
-                self.text.render(&s)
+                println!("formatted {:?}", s);
+                *self.output_state.lock().await = s;
+                println!("render inner");
+                self.text.render().await
             } else {
+                println!("no data");
                 None
             }
         })

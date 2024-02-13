@@ -20,3 +20,4 @@ ab_glyph = "0.2.23"
 glyph_brush_layout = "0.2.3"
 tokio = { version = "1.36.0", features = ["full"] }
 anyhow = "1.0.79"
+toml = { version = "0.8.10", features = ["parse"] }

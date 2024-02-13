@@ -1,8 +1,10 @@
-use std::future::Future;
 use crate::view::canvas::Canvas;
 use crate::view::Renderable;
 use pixelfield::color::Color;
 use pixelfield::pixelfield::PixelField;
+use std::collections::HashMap;
+use std::future::Future;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -21,48 +23,36 @@ impl Page {
         }
     }
 
-    pub fn render<'m>(&'m self) -> Pin<Box<dyn Future<Output=PixelField> + 'm >> {
-        /*
-        let canvas = self.canvas.clone();
-        spawn_blocking(move || canvas.render())
-            .await
-            .ok()
-            .unwrap_or_default()
-            .unwrap_or_default()
-
-         */
-        Box::pin(
-            async move {
-                self.canvas.render().await.unwrap_or_default()
-            }
-        )
+    pub fn render<'m>(&'m self) -> Pin<Box<dyn Future<Output = PixelField> + 'm>> {
+        Box::pin(async move { self.canvas.render().await.unwrap_or_default() })
     }
 }
 
-#[cfg(test)]
-mod test {
-    use pixelfield::pixelfield::Rectangle;
-    use crate::view::text::Text;
-    use super::*;
+pub struct PageManager<PageId, const WIDTH: u32, const HEIGHT: u32>
+where
+    PageId: Hash + PartialEq + Eq,
+{
+    pages: HashMap<PageId, Page>,
+}
 
-    #[tokio::test]
-    async fn whut() {
-        let mut canvas = Canvas::new();
-        
-        canvas.place(
-            (0,0),
-            Text::new(
-                Rectangle {
-                    nw: (0,0).into(),
-                    se: (1000, 100).into(),
-                },
-                todo!(),
-                24.3,
-            )
-        );
+impl<PageId, const WIDTH: u32, const HEIGHT: u32> PageManager<PageId, WIDTH, HEIGHT> where
+    PageId: Hash + PartialEq + Eq
+{
+    pub fn new() -> Self {
+        Self {
+            pages: Default::default()
+        }
+    }
 
-        let page = Page::new(canvas);
+    pub fn register(&mut self, id: PageId, page: Page) {
+        self.pages.insert(id, page);
+    }
 
-        let pixels = page.render().await;
+    pub async fn render(&self, id: PageId) -> PixelField {
+        if let Some(page) = self.pages.get(&id) {
+            page.render().await
+        } else {
+            PixelField::default()
+        }
     }
 }
