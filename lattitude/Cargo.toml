@@ -11,6 +11,9 @@ pixelfield = { path = "../pixelfield" }
 chrono = { version = "0.4.31" , features = ["serde"]}
 bytes = "1.5.0"
 actix = "0.13.1"
+clap = { version = "4.5.0", features = ["derive"]}
+log = "0.4.20"
+env_logger = "0.11.2"
 enum-primitive-derive = "0.3.0"
 num-traits = "0.2.17"
 serde = { version = "1.0.195", features = ["derive"] }
@@ -21,3 +24,10 @@ glyph_brush_layout = "0.2.3"
 tokio = { version = "1.36.0", features = ["full"] }
 anyhow = "1.0.79"
 toml = { version = "0.8.10", features = ["parse"] }
+embedded-hal = "1.0.0"
+linux-embedded-hal = { version = "0.4.0",  optional = true }
+it8951 = { path = "../it8951", optional = true }
+
+
+[features]
+epd = [ "linux-embedded-hal", "it8951" ]

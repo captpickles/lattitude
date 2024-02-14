@@ -15,7 +15,12 @@ impl<R: Renderable> Rotate<R> {
 }
 
 impl<R: Renderable> Renderable for Rotate<R> {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r >> {
-        Box::pin(async move { self.inner.render().await.map(|inner| inner.rotate(self.rotation)) })
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+        Box::pin(async move {
+            self.inner
+                .render()
+                .await
+                .map(|inner| inner.rotate(self.rotation))
+        })
     }
 }

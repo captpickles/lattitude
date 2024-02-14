@@ -1,8 +1,8 @@
 use bytes::Buf;
+use engine::view::pixels::Pixels;
 use pixelfield::image::bmp_from_reader;
 use pixelfield::pixelfield::PixelField;
 use std::collections::HashMap;
-use engine::view::pixels::Pixels;
 
 #[derive(Hash, PartialEq, Eq, Debug)]
 pub enum Art {
@@ -30,7 +30,6 @@ impl ArtRegistry {
         } else {
             Pixels::from_pixel_field(PixelField::default())
         }
-
     }
 }
 

@@ -3,76 +3,6 @@ use std::fmt::Debug;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-/*
-pub trait Color: Copy + Clone + IntoEnumIterator + PartialEq + Debug + Unpin + Send + 'static {
-    const BITS_PER_PIXEL: u8;
-    const BLACK: Self;
-    const WHITE: Self;
-
-    fn color_cutpoints() -> Vec<u8> {
-        let slices = 2u8.pow(Self::BITS_PER_PIXEL as _) - 1;
-        let slice_width = 255 / slices;
-
-        // black is always 0
-        let mut cutpoints = vec![0];
-        let mut cur = 0;
-
-        for _ in 0..slices {
-            cur += slice_width;
-            cutpoints.push(cur);
-        }
-
-        cutpoints
-    }
-
-    fn pixel_cutpoints() -> Vec<u8> {
-        Self::color_cutpoints()
-    }
-
-    fn from_pixel(pixel: Pixel) -> Self {
-        let r = pixel.r as f32;
-        let g = pixel.g as f32;
-        let b = pixel.b as f32;
-
-        let y = (0.299 * r + 0.587 * g + 0.114 * b).round() as u8;
-
-        let cutpoints = Self::pixel_cutpoints();
-
-        let color = cutpoints.iter().zip(Self::iter()).find(|(cutpoint, _color)| {
-            y <= **cutpoint
-        }).map(|(_, color)|  color );
-
-        color.unwrap_or(Self::BLACK)
-    }
-
-    fn as_pixel(&self) -> Pixel {
-        let cutpoints = Self::color_cutpoints();
-        for (i, color) in Self::iter().enumerate() {
-            if *self == color {
-                return Pixel {
-                    r: cutpoints[i],
-                    g: cutpoints[i],
-                    b: cutpoints[i],
-                }
-            }
-        }
-
-        Pixel {
-            r: 0,
-            g: 0,
-            b: 0,
-        }
-    }
-
-    fn map<M:Color>(&self) -> M {
-        let pixel = self.as_pixel();
-        M::from_pixel(pixel)
-    }
-
-}
-
- */
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Color {
     Rgb(Rgb),
@@ -82,14 +12,38 @@ pub enum Color {
     Gray16(Gray16),
 }
 
+impl Color {
+    pub fn luma(&self) -> u8 {
+        match self {
+            Color::Rgb(inner) => inner.luma(),
+            Color::Binary(inner) => inner.luma(),
+            Color::Gray4(inner) => inner.luma(),
+            Color::Gray8(inner) => inner.luma(),
+            Color::Gray16(inner) => inner.luma(),
+        }
+    }
+}
+
+impl From<Color> for Gray4 {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::Rgb(inner) => inner.into(),
+            Color::Binary(inner) => Rgb::from(inner).into(),
+            Color::Gray4(inner) => inner,
+            Color::Gray8(inner) => Rgb::from(inner).into(),
+            Color::Gray16(inner) => Rgb::from(inner).into(),
+        }
+    }
+}
+
 impl From<Color> for Pixel {
     fn from(value: Color) -> Self {
         match value {
             Color::Rgb(inner) => inner.into(),
-            Color::Binary(inner) => inner.into(),
-            Color::Gray4(inner) => inner.into(),
-            Color::Gray8(inner) => inner.into(),
-            Color::Gray16(inner) => inner.into(),
+            Color::Binary(inner) => Rgb::from(inner).into(),
+            Color::Gray4(inner) => Rgb::from(inner).into(),
+            Color::Gray8(inner) => Rgb::from(inner).into(),
+            Color::Gray16(inner) => Rgb::from(inner).into(),
         }
     }
 }
@@ -101,6 +55,12 @@ pub struct Rgb {
     pub b: u8,
 }
 
+impl Rgb {
+    pub fn luma(&self) -> u8 {
+        (0.299 * self.r as f32 + 0.587 * self.g as f32 + 0.114 * self.b as f32).round() as u8
+    }
+}
+
 impl From<Pixel> for Rgb {
     fn from(value: Pixel) -> Self {
         Self {
@@ -108,6 +68,12 @@ impl From<Pixel> for Rgb {
             g: value.g,
             b: value.b,
         }
+    }
+}
+
+impl From<Rgb> for Color {
+    fn from(value: Rgb) -> Self {
+        Self::Rgb(value)
     }
 }
 
@@ -121,6 +87,49 @@ impl From<Rgb> for Pixel {
     }
 }
 
+impl From<Rgb> for Gray4 {
+    fn from(value: Rgb) -> Self {
+        let y = (0.299 * value.r as f32 + 0.587 * value.g as f32 + 0.114 * value.b as f32).round()
+            as u8;
+
+        if y > 192 {
+            Gray4::White
+        } else if y > 128 {
+            Gray4::Gray2
+        } else if y > 64 {
+            Gray4::Gray1
+        } else {
+            Gray4::Black
+        }
+    }
+}
+
+impl From<BlackAndWhite> for Rgb {
+    fn from(value: BlackAndWhite) -> Self {
+        match value {
+            BlackAndWhite::Black => Rgb { r: 0, g: 0, b: 0 },
+            BlackAndWhite::White => Rgb {
+                r: 255,
+                g: 255,
+                b: 255,
+            },
+        }
+    }
+}
+
+impl From<Rgb> for BlackAndWhite {
+    fn from(value: Rgb) -> Self {
+        let y = (0.299 * value.r as f32 + 0.587 * value.g as f32 + 0.114 * value.b as f32).round()
+            as u8;
+
+        if y > 128 {
+            BlackAndWhite::White
+        } else {
+            BlackAndWhite::Black
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, EnumIter)]
 pub enum BlackAndWhite {
@@ -128,15 +137,20 @@ pub enum BlackAndWhite {
     White,
 }
 
-impl From<BlackAndWhite> for Pixel {
+impl BlackAndWhite {
+    pub fn luma(&self) -> u8 {
+        match self {
+            BlackAndWhite::Black => 0,
+            BlackAndWhite::White => 255,
+        }
+    }
+}
+
+impl From<BlackAndWhite> for Gray4 {
     fn from(value: BlackAndWhite) -> Self {
         match value {
-            BlackAndWhite::Black => Pixel { r: 0, g: 0, b: 0 },
-            BlackAndWhite::White => Pixel {
-                r: 255,
-                g: 255,
-                b: 255,
-            },
+            BlackAndWhite::Black => Gray4::Black,
+            BlackAndWhite::White => Gray4::White,
         }
     }
 }
@@ -150,21 +164,32 @@ pub enum Gray4 {
     White,
 }
 
-impl From<Gray4> for Pixel {
+impl Gray4 {
+    pub fn luma(&self) -> u8 {
+        match self {
+            Gray4::Black => 0,
+            Gray4::Gray1 => 86,
+            Gray4::Gray2 => 171,
+            Gray4::White => 255,
+        }
+    }
+}
+
+impl From<Gray4> for Rgb {
     fn from(value: Gray4) -> Self {
         match value {
-            Gray4::Black => Pixel { r: 0, g: 0, b: 0 },
-            Gray4::Gray1 => Pixel {
+            Gray4::Black => Rgb { r: 0, g: 0, b: 0 },
+            Gray4::Gray1 => Rgb {
                 r: 86,
                 g: 86,
                 b: 86,
             },
-            Gray4::Gray2 => Pixel {
+            Gray4::Gray2 => Rgb {
                 r: 171,
                 g: 171,
                 b: 171,
             },
-            Gray4::White => Pixel {
+            Gray4::White => Rgb {
                 r: 255,
                 g: 255,
                 b: 255,
@@ -186,41 +211,56 @@ pub enum Gray8 {
     White,
 }
 
-impl From<Gray8> for Pixel {
+impl Gray8 {
+    pub fn luma(&self) -> u8 {
+        match self {
+            Gray8::Black => 0,
+            Gray8::Gray1 => 36,
+            Gray8::Gray2 => 72,
+            Gray8::Gray3 => 180,
+            Gray8::Gray4 => 144,
+            Gray8::Gray5 => 180,
+            Gray8::Gray6 => 216,
+            Gray8::White => 255,
+        }
+    }
+}
+
+impl From<Gray8> for Rgb {
     fn from(value: Gray8) -> Self {
         match value {
-            Gray8::Black => Pixel { r: 0, g: 0, b: 0 },
-            Gray8::Gray1 => Pixel {
+            Gray8::Black => Rgb { r: 0, g: 0, b: 0 },
+            Gray8::Gray1 => Rgb {
                 r: 36,
                 g: 36,
                 b: 36,
             },
-            Gray8::Gray2 => Pixel {
+            Gray8::Gray2 => Rgb {
                 r: 72,
                 g: 72,
                 b: 72,
             },
-            Gray8::Gray3 => Pixel {
+            Gray8::Gray3 => Rgb {
                 r: 108,
                 g: 108,
                 b: 108,
             },
-            Gray8::Gray4 => Pixel {
+            Gray8::Gray4 => Rgb {
                 r: 144,
                 g: 144,
                 b: 144,
             },
-            Gray8::Gray5 => Pixel {
+            Gray8::Gray5 => Rgb {
                 r: 180,
                 g: 180,
                 b: 180,
             },
-            Gray8::Gray6 => Pixel {
+            Gray8::Gray6 => Rgb {
                 r: 216,
                 g: 216,
                 b: 216,
             },
-            Gray8::White => Pixel {
+            Gray8::White => Rgb {
                 r: 255,
                 g: 255,
                 b: 255,
@@ -250,81 +290,104 @@ pub enum Gray16 {
     White,
 }
 
-impl From<Gray16> for Pixel {
+impl Gray16 {
+    pub fn luma(&self) -> u8 {
+        match self {
+            Gray16::Black => 0,
+            Gray16::Gray1 => 17,
+            Gray16::Gray2 => 34,
+            Gray16::Gray3 => 51,
+            Gray16::Gray4 => 68,
+            Gray16::Gray5 => 85,
+            Gray16::Gray6 => 102,
+            Gray16::Gray7 => 119,
+            Gray16::Gray8 => 136,
+            Gray16::Gray9 => 153,
+            Gray16::Gray10 => 170,
+            Gray16::Gray11 => 187,
+            Gray16::Gray12 => 204,
+            Gray16::Gray13 => 221,
+            Gray16::Gray14 => 238,
+            Gray16::White => 255,
+        }
+    }
+}
+
+impl From<Gray16> for Rgb {
     fn from(value: Gray16) -> Self {
         match value {
-            Gray16::Black => Pixel { r: 0, g: 0, b: 0 },
-            Gray16::Gray1 => Pixel {
+            Gray16::Black => Rgb { r: 0, g: 0, b: 0 },
+            Gray16::Gray1 => Rgb {
                 r: 17,
                 g: 17,
                 b: 17,
             },
-            Gray16::Gray2 => Pixel {
+            Gray16::Gray2 => Rgb {
                 r: 34,
                 g: 34,
                 b: 34,
             },
-            Gray16::Gray3 => Pixel {
+            Gray16::Gray3 => Rgb {
                 r: 51,
                 g: 51,
                 b: 51,
             },
-            Gray16::Gray4 => Pixel {
+            Gray16::Gray4 => Rgb {
                 r: 68,
                 g: 68,
                 b: 68,
             },
-            Gray16::Gray5 => Pixel {
+            Gray16::Gray5 => Rgb {
                 r: 85,
                 g: 85,
                 b: 85,
             },
-            Gray16::Gray6 => Pixel {
+            Gray16::Gray6 => Rgb {
                 r: 102,
                 g: 102,
                 b: 102,
             },
-            Gray16::Gray7 => Pixel {
+            Gray16::Gray7 => Rgb {
                 r: 119,
                 g: 119,
                 b: 119,
             },
-            Gray16::Gray8 => Pixel {
+            Gray16::Gray8 => Rgb {
                 r: 136,
                 g: 136,
                 b: 136,
             },
-            Gray16::Gray9 => Pixel {
+            Gray16::Gray9 => Rgb {
                 r: 153,
                 g: 153,
                 b: 153,
             },
-            Gray16::Gray10 => Pixel {
+            Gray16::Gray10 => Rgb {
                 r: 170,
                 g: 170,
                 b: 170,
             },
-            Gray16::Gray11 => Pixel {
+            Gray16::Gray11 => Rgb {
                 r: 187,
                 g: 187,
                 b: 187,
             },
-            Gray16::Gray12 => Pixel {
+            Gray16::Gray12 => Rgb {
                 r: 204,
                 g: 204,
                 b: 204,
             },
-            Gray16::Gray13 => Pixel {
+            Gray16::Gray13 => Rgb {
                 r: 221,
                 g: 221,
                 b: 221,
             },
-            Gray16::Gray14 => Pixel {
+            Gray16::Gray14 => Rgb {
                 r: 238,
                 g: 238,
                 b: 238,
             },
-            Gray16::White => Pixel {
+            Gray16::White => Rgb {
                 r: 255,
                 g: 255,
                 b: 255,

@@ -53,26 +53,20 @@ impl Rectangle {
     pub fn bounding_square(&self) -> Rectangle {
         let dimensions = self.dimensions();
         match dimensions.width.cmp(&dimensions.height) {
-            Ordering::Less => {
-                Rectangle {
-                    nw: self.nw,
-                    se: Point {
-                        x: self.nw.x + dimensions.height as i32,
-                        y: self.nw.y + dimensions.height as i32,
-                    },
-                }
+            Ordering::Less => Rectangle {
+                nw: self.nw,
+                se: Point {
+                    x: self.nw.x + dimensions.height as i32,
+                    y: self.nw.y + dimensions.height as i32,
+                },
             },
-            Ordering::Equal => {
-                *self
-            },
-            Ordering::Greater => {
-                Rectangle {
-                    nw: self.nw,
-                    se: Point {
-                        x: self.nw.y + dimensions.width as i32,
-                        y: self.nw.y + dimensions.width as i32,
-                    },
-                }
+            Ordering::Equal => *self,
+            Ordering::Greater => Rectangle {
+                nw: self.nw,
+                se: Point {
+                    x: self.nw.y + dimensions.width as i32,
+                    y: self.nw.y + dimensions.width as i32,
+                },
             },
         }
     }
@@ -183,28 +177,17 @@ impl Pixel {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PixelField {
     //pixels: Vec<Pixel>,
-    pixels: HashMap<Point, Color>
-}
-
-impl Default for PixelField {
-    fn default() -> Self {
-        //Self { pixels: vec![] }
-        Self {
-            pixels: HashMap::default()
-        }
-    }
+    pixels: HashMap<Point, Color>,
 }
 
 impl PixelField {
     pub fn iter(&self) -> impl Iterator<Item = Pixel> + '_ {
-        self.pixels.iter().map(|(point, color)| {
-            Pixel {
-                point:  *point,
-                color: *color,
-            }
+        self.pixels.iter().map(|(point, color)| Pixel {
+            point: *point,
+            color: *color,
         })
     }
 
@@ -225,7 +208,6 @@ impl PixelField {
         let point = point.into();
         self.pixels.get(&point).cloned()
     }
-
 
     pub fn bounding_box(&self) -> Rectangle {
         let mut min_x = i32::MAX;
@@ -268,6 +250,13 @@ impl PixelField {
         // inflated to be a square to allow rotation
         let rotated_bbox = original_bbox.bounding_square();
         println!("rotated bbox : {:?}", rotated_bbox);
+        let rotated_bbox = Rectangle {
+            nw: rotated_bbox.nw,
+            se: Point {
+                x: rotated_bbox.se.x * 2,
+                y: rotated_bbox.se.y * 2,
+            },
+        };
 
         let mut rotated = PixelField::default();
 
@@ -281,7 +270,6 @@ impl PixelField {
         let rotated_dimensions = rotated_bbox.dimensions();
 
         println!("rotated dims : {:?}", rotated_dimensions);
-
 
         for x in rotated_bbox.nw.x..=rotated_bbox.se.x {
             for y in rotated_bbox.nw.y..=rotated_bbox.se.y {
@@ -297,7 +285,7 @@ impl PixelField {
             }
         }
 
-        rotated
+        rotated.trim()
     }
 
     pub fn scale(&self, scale: f32) -> PixelField {
@@ -320,7 +308,7 @@ impl PixelField {
         scaled
     }
 
-    pub fn trim(&self, background: Color) -> PixelField {
+    pub fn trim(&self) -> PixelField {
         let original_bbox = self.bounding_box();
 
         let mut nw = original_bbox.nw;
@@ -329,7 +317,7 @@ impl PixelField {
         'outer: for x in original_bbox.x_range() {
             for y in original_bbox.y_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color != background {
+                    if color.luma() != 255 {
                         nw.y = y;
                         break 'outer;
                     }
@@ -340,7 +328,7 @@ impl PixelField {
         'outer: for x in original_bbox.x_range().rev() {
             for y in original_bbox.y_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color != background {
+                    if color.luma() != 255 {
                         se.y = y;
                         break 'outer;
                     }
@@ -351,7 +339,7 @@ impl PixelField {
         'outer: for y in original_bbox.y_range() {
             for x in original_bbox.x_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color != background {
+                    if color.luma() != 255 {
                         nw.x = x;
                         break 'outer;
                     }
@@ -362,7 +350,7 @@ impl PixelField {
         'outer: for y in original_bbox.y_range().rev() {
             for x in original_bbox.x_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color != background {
+                    if color.luma() != 255 {
                         se.x = x;
                         break 'outer;
                     }
@@ -377,14 +365,12 @@ impl PixelField {
                 .pixels
                 .iter()
                 .filter(|(point, _color)| trimmed_bbox.contains(**point))
-                .map(|(point, color)| {
-                    (*point, *color)
-                })
+                .map(|(point, color)| (*point, *color))
                 .collect(),
         }
     }
 
-    pub fn to_bmp(&self) -> bmp::Image {
+    pub fn to_bmp(&self, dimensions: Option<(u32, u32)>) -> bmp::Image {
         let bbox = self.bounding_box();
 
         let x_adjustment = if bbox.x_range().start < 0 {
@@ -399,18 +385,42 @@ impl PixelField {
             0
         };
 
-        let mut bmp = bmp::Image::new((bbox.x_range().end + x_adjustment + 1) as u32, (bbox.y_range().end + y_adjustment + 1) as u32);
+        let width = if let Some((width, _)) = dimensions {
+            let original_width = (bbox.x_range().end + x_adjustment + 1) as u32;
+            if original_width < width {
+                width
+            } else {
+                original_width
+            }
+        } else {
+            (bbox.x_range().end + x_adjustment + 1) as u32
+        };
+
+        let height = if let Some((_, height)) = dimensions {
+            let original_height = (bbox.y_range().end + y_adjustment + 1) as u32;
+            if original_height < height {
+                height
+            } else {
+                original_height
+            }
+        } else {
+            (bbox.y_range().end + y_adjustment + 1) as u32
+        };
+
+        let mut bmp = bmp::Image::new(width, height);
 
         for x in 0..bmp.get_width() {
             for y in 0..bmp.get_height() {
-                bmp.set_pixel(x, y, bmp::Pixel {
-                    r: 255,
-                    g: 255,
-                    b: 255,
-                });
-
+                bmp.set_pixel(
+                    x,
+                    y,
+                    bmp::Pixel {
+                        r: 255,
+                        g: 255,
+                        b: 255,
+                    },
+                );
             }
-
         }
 
         for pixel in self.iter() {
@@ -425,7 +435,6 @@ impl PixelField {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use crate::pixelfield::Rectangle;
@@ -433,8 +442,8 @@ mod test {
     #[test]
     fn origin_bbox_to_dimensions() {
         let rect = Rectangle {
-            nw: (0,0).into(),
-            se: (100,200).into(),
+            nw: (0, 0).into(),
+            se: (100, 200).into(),
         };
 
         let dims = rect.dimensions();
@@ -446,8 +455,8 @@ mod test {
     #[test]
     fn origin_bbox_to_center() {
         let rect = Rectangle {
-            nw: (0,0).into(),
-            se: (100,200).into(),
+            nw: (0, 0).into(),
+            se: (100, 200).into(),
         };
 
         let point = rect.center_point();
@@ -459,8 +468,8 @@ mod test {
     #[test]
     fn offset_bbox_to_dimensions() {
         let rect = Rectangle {
-            nw: (20,20).into(),
-            se: (100,200).into(),
+            nw: (20, 20).into(),
+            se: (100, 200).into(),
         };
 
         let dims = rect.dimensions();
@@ -471,16 +480,13 @@ mod test {
 
     #[test]
     fn bounding_square() {
-
         let rect = Rectangle {
-            nw: (8,6).into(),
-            se: (493, 387).into()
+            nw: (8, 6).into(),
+            se: (493, 387).into(),
         };
 
         let square = rect.bounding_square();
 
-        println!("{:#?}",square.dimensions());
-
+        println!("{:#?}", square.dimensions());
     }
-
 }

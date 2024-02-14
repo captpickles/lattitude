@@ -1,14 +1,11 @@
 use crate::view::canvas::Canvas;
 use crate::view::Renderable;
-use pixelfield::color::Color;
 use pixelfield::pixelfield::PixelField;
 use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::task::spawn_blocking;
 
 pub struct Page {
     canvas: Arc<Canvas>,
@@ -28,6 +25,7 @@ impl Page {
     }
 }
 
+#[derive(Default)]
 pub struct PageManager<PageId, const WIDTH: u32, const HEIGHT: u32>
 where
     PageId: Hash + PartialEq + Eq,
@@ -35,12 +33,13 @@ where
     pages: HashMap<PageId, Page>,
 }
 
-impl<PageId, const WIDTH: u32, const HEIGHT: u32> PageManager<PageId, WIDTH, HEIGHT> where
-    PageId: Hash + PartialEq + Eq
+impl<PageId, const WIDTH: u32, const HEIGHT: u32> PageManager<PageId, WIDTH, HEIGHT>
+where
+    PageId: Hash + PartialEq + Eq,
 {
     pub fn new() -> Self {
         Self {
-            pages: Default::default()
+            pages: Default::default(),
         }
     }
 

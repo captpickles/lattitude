@@ -1,13 +1,15 @@
 use crate::view::Renderable;
 use ab_glyph::{Font, FontRef, PxScale};
-use pixelfield::pixelfield::{Pixel, PixelField, Rectangle};
+use glyph_brush_layout::{
+    BuiltInLineBreaker, FontId, GlyphPositioner, HorizontalAlign, Layout, SectionGeometry,
+    SectionGlyph, SectionText, VerticalAlign,
+};
+use pixelfield::color::{Color, Rgb};
+use pixelfield::pixelfield::PixelField;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use glyph_brush_layout::{BuiltInLineBreaker, FontId, GlyphPositioner, HorizontalAlign, Layout, SectionGeometry, SectionGlyph, SectionText, VerticalAlign};
 use tokio::sync::Mutex;
-use tokio::task::spawn_blocking;
-use pixelfield::color::{Color, Rgb};
 
 pub enum Source {
     Static(String),
@@ -57,7 +59,6 @@ impl Text {
             }],
         );
 
-
         let mut pixel_field = PixelField::default();
 
         for glyph in &glpyhs {
@@ -72,18 +73,15 @@ impl Text {
             let x_offset = glyph.px_bounds().min.x;
             let y_offset = glyph.px_bounds().min.y;
             glyph.draw(|x, y, c| {
-                let color_val =  (255 - ((255 as f32 * c) as u8));
+                let color_val = 255 - ((255.0 * c) as u8);
                 if c > 0.10 {
                     pixel_field.set(
-                        (
-                            (x as f32 + x_offset) as i32,
-                            (y as f32 + y_offset) as i32,
-                        ),
+                        ((x as f32 + x_offset) as i32, (y as f32 + y_offset) as i32),
                         Color::Rgb(Rgb {
                             r: color_val,
                             g: color_val,
                             b: color_val,
-                        })
+                        }),
                     );
                 }
             });
@@ -95,16 +93,10 @@ impl Renderable for Text {
     fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             let text = match &self.source {
-                Source::Static(inner) => {
-                    Some(inner.clone())
-                }
+                Source::Static(inner) => Some(inner.clone()),
                 Source::Dynamic(inner) => {
                     let locked = inner.lock().await;
-                    if let Some(locked) = &*locked {
-                        Some(locked.clone())
-                    } else {
-                        None
-                    }
+                    (*locked).as_ref().cloned()
                 }
             };
 

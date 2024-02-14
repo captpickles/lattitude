@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize};
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Envelope {

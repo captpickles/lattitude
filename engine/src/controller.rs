@@ -1,15 +1,10 @@
-use actix::dev::MessageResponse;
-use actix::{Actor, Context, Handler, Message};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
+use serde::Serialize;
 use std::future::Future;
-use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::task::spawn_blocking;
 use toml::Value;
 
 pub trait Controller: Send + 'static {
@@ -115,14 +110,10 @@ where
         let last_update = self.last_update.clone();
 
         Box::pin(async move {
-            let last_update_time = self.last_update.lock().await.clone();
+            let last_update_time = *self.last_update.lock().await;
 
             let should_update = if let Some(last_update) = last_update_time {
-                if (Utc::now() - last_update) > self.cadence {
-                    true
-                } else {
-                    false
-                }
+                (Utc::now() - last_update) > self.cadence
             } else {
                 true
             };
@@ -136,6 +127,7 @@ where
     }
 }
 
+#[derive(Default)]
 pub struct Controllers {
     controllers: Vec<Box<dyn ManageableController>>,
 }
@@ -153,7 +145,10 @@ impl Controllers {
         }
     }
 
-    pub fn register<S>(&mut self, controller: impl Controller<Output = S> + Sync) -> Arc<Mutex<Option<S>>>
+    pub fn register<S>(
+        &mut self,
+        controller: impl Controller<Output = S> + Sync,
+    ) -> Arc<Mutex<Option<S>>>
     where
         S: Send + Sync + PartialEq + 'static,
     {

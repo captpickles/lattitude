@@ -22,7 +22,7 @@ impl Pixels {
 }
 
 impl Renderable for Pixels {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r >> {
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move { Some(self.inner.clone()) })
     }
 }

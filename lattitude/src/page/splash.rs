@@ -1,24 +1,21 @@
-use engine::page::Page;
-use engine::page;
-use engine::view::{HorizontalAlignment, VerticalAlignment};
-use engine::view::rotate::Rotate;
-use engine::view::text::{Source, Text};
-use pixelfield::pixelfield::Rotation;
 use crate::art::Art;
 use crate::font::Font;
 use crate::integration::birdnet::BirdList;
 use crate::page::PageContext;
+use engine::page;
+use engine::page::Page;
+use engine::view::rotate::Rotate;
+use engine::view::text::{Source, Text};
+use engine::view::{HorizontalAlignment, VerticalAlignment};
+use pixelfield::pixelfield::Rotation;
 
 pub fn splash_page(ctx: &PageContext) -> Page {
-    page( |canvas| {
+    page(|canvas| {
         canvas.place(
-            (0, 0),
-            HorizontalAlignment::Left,
-            VerticalAlignment::Top,
-            Rotate::new(
-                ctx.art(Art::Logo),
-                Rotation::Clockwise(25.0),
-            )
+            (700, 900),
+            HorizontalAlignment::Center,
+            VerticalAlignment::Middle,
+            Rotate::new(ctx.art(Art::Logo), Rotation::Clockwise(25.0)),
         );
 
         /*
@@ -44,8 +41,8 @@ pub fn splash_page(ctx: &PageContext) -> Page {
                 400,
                 ctx.font(Font::Typewriter),
                 20.0,
-                Source::Static("Tacos".to_string())
-            )
+                Source::Static("Låttitüdé".to_string()),
+            ),
         );
     })
 }

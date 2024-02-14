@@ -1,18 +1,13 @@
-use std::cell::RefCell;
-use actix::dev::{MessageResponse, OneshotSender};
-use actix::{Actor, Context, ContextFutureSpawner, Handler, Message, MessageResult, Recipient, ResponseActFuture, WrapFuture};
-use pixelfield::pixelfield::{PixelField, Rectangle};
-use std::future::{Future, IntoFuture};
+use pixelfield::pixelfield::PixelField;
+use std::future::Future;
 use std::pin::Pin;
-use std::rc::Rc;
-use tokio::sync::oneshot::Sender;
 
-pub mod text;
 pub mod canvas;
+pub mod pixels;
 pub mod rotate;
 pub mod scale;
+pub mod text;
 pub mod trim;
-pub mod pixels;
 
 pub enum HorizontalAlignment {
     Left,
@@ -26,6 +21,6 @@ pub enum VerticalAlignment {
     Bottom,
 }
 
-pub trait Renderable : Send + Sync {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output=Option<PixelField>> +'r >>;
+pub trait Renderable: Send + Sync {
+    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>>;
 }
