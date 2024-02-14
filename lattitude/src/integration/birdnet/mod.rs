@@ -57,6 +57,7 @@ impl Controller for BirdNet {
     fn update(&mut self) -> impl Future<Output=Option<Self::Output>> + Send {
         async move {
             if let Some(configuration) = &self.configuration {
+                println!("query birdnet");
                 if let Ok(response) = Client::new()
                     .get(format!("{}/{}/detections", BASE_URL, configuration.token))
                     .query(&[(
@@ -79,7 +80,11 @@ impl Controller for BirdNet {
                             }
                         }
 
-                        let mut num_short = configuration.keep - detections.len();
+                        let mut num_short = if detections.len() < configuration.keep {
+                            configuration.keep - detections.len()
+                        } else {
+                            0
+                        };
 
                         while num_short > 0 {
                             if let Some(backfill) = self.detections.pop_front() {
@@ -101,8 +106,8 @@ impl Controller for BirdNet {
         }
     }
 
-    fn cadence(&self) -> Option<Duration> {
-        Some(Duration::minutes(10))
+    fn cadence(&self) -> Duration {
+        Duration::minutes(10)
     }
 
     fn identifier(&self) -> String {

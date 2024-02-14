@@ -3,7 +3,7 @@
 use std::env;
 use toml::toml;
 use engine::controller::Controllers;
-use engine::page::{Page, PageManager};
+use engine::page::{PageManager};
 use engine::view::canvas::Canvas;
 use engine::view::{HorizontalAlignment, VerticalAlignment};
 use engine::view::pixels::Pixels;
@@ -11,8 +11,10 @@ use engine::view::rotate::Rotate;
 use engine::view::text::{Source, Text};
 use pixelfield::pixelfield::{Rectangle, Rotation};
 use crate::art::{Art, build_art_registry};
+use crate::coordinator::Coordinator;
 use crate::font::{build_font_registry, Font};
 use crate::integration::birdnet::{BirdList, BirdNet};
+use crate::page::{build_page_manager, LattitudePage};
 
 pub mod integration;
 pub mod font;
@@ -35,6 +37,18 @@ async fn main() -> Result<(), anyhow::Error> {
 
     controllers.configure( "birdNET", config.into()).await;
     controllers.update().await;
+
+    let coordinator = Coordinator::new(
+        controllers,
+        build_page_manager::<808, 1404>(&font, &art)
+    );
+
+    println!("start coord");
+    coordinator.run(
+        LattitudePage::Splash,
+        LattitudePage::Splash,
+    ).await;
+    println!("ended coord");
 
     /*
     let splash = page( |canvas| {

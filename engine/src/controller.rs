@@ -1,6 +1,6 @@
 use actix::dev::MessageResponse;
 use actix::{Actor, Context, Handler, Message};
-use chrono::Duration;
+use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -19,11 +19,11 @@ pub trait Controller: Send + 'static {
 
     fn identifier(&self) -> String;
 
-    fn cadence(&self) -> Option<Duration>;
+    fn cadence(&self) -> Duration;
 
     fn configure(&mut self, configuration: Option<Self::Configuration>);
 
-    fn update(&mut self) -> impl Future<Output = Option<Self::Output>> + Send;
+    fn update(&mut self) -> impl Future<Output = Option<Self::Output>> + Send + Sync;
 }
 
 pub struct ControllerManager<C, Configuration, Output>
@@ -32,9 +32,10 @@ where
     Output: Send + 'static,
 {
     identifier: String,
-    cadence: Option<Duration>,
+    cadence: Duration,
     controller: Arc<Mutex<C>>,
     state: Arc<Mutex<Option<C::Output>>>,
+    last_update: Arc<Mutex<Option<DateTime<Utc>>>>,
 }
 
 impl<C, Configuration, Output> ControllerManager<C, Configuration, Output>
@@ -48,6 +49,7 @@ where
             cadence: controller.cadence(),
             controller: Arc::new(Mutex::new(controller)),
             state: Arc::new(Mutex::new(None)),
+            last_update: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -62,29 +64,29 @@ where
     }
 }
 
-pub trait ManageableController {
+pub trait ManageableController: Sync + Send {
     fn identifier(&self) -> String;
 
-    fn cadence(&self) -> Option<Duration>;
+    fn cadence(&self) -> Duration;
 
     fn configure<'r>(
         &'r self,
         configuration: Option<toml::Value>,
     ) -> Pin<Box<dyn Future<Output = ()> + 'r>>;
-    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + 'r>>;
+    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync + 'r>>;
 }
 
 impl<C, Configuration, Output> ManageableController for ControllerManager<C, Configuration, Output>
 where
-    C: Controller<Configuration = Configuration, Output = Output>,
+    C: Controller<Configuration = Configuration, Output = Output> + Sync,
     Configuration: DeserializeOwned,
-    Output: Send + PartialEq + 'static,
+    Output: Send + PartialEq + Sync + 'static,
 {
     fn identifier(&self) -> String {
         self.identifier.clone()
     }
 
-    fn cadence(&self) -> Option<Duration> {
+    fn cadence(&self) -> Duration {
         self.cadence
     }
 
@@ -107,13 +109,29 @@ where
         })
     }
 
-    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + 'r>> {
+    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync + 'r>> {
         let controller = self.controller.clone();
         let state = self.state.clone();
+        let last_update = self.last_update.clone();
 
         Box::pin(async move {
-            let v = controller.lock().await.update().await;
-            *state.lock().await = v;
+            let last_update_time = self.last_update.lock().await.clone();
+
+            let should_update = if let Some(last_update) = last_update_time {
+                if (Utc::now() - last_update) > self.cadence {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                true
+            };
+
+            if should_update {
+                let v = controller.lock().await.update().await;
+                *state.lock().await = v;
+                *last_update.lock().await = Some(Utc::now());
+            }
         })
     }
 }
@@ -135,7 +153,7 @@ impl Controllers {
         }
     }
 
-    pub fn register<S>(&mut self, controller: impl Controller<Output = S>) -> Arc<Mutex<Option<S>>>
+    pub fn register<S>(&mut self, controller: impl Controller<Output = S> + Sync) -> Arc<Mutex<Option<S>>>
     where
         S: Send + Sync + PartialEq + 'static,
     {
@@ -162,6 +180,13 @@ impl Controllers {
             .find(|e| e.identifier() == identifier)
         {
             controller.configure(None).await
+        }
+    }
+
+    pub async fn run(&self) {
+        loop {
+            self.update().await;
+            tokio::time::sleep(Duration::seconds(5).to_std().unwrap()).await;
         }
     }
 }

@@ -31,7 +31,7 @@ impl<'p> PageContext<'p> {
 }
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
-pub enum PageId {
+pub enum LattitudePage {
     Unbox,
     Splash,
 }
@@ -39,13 +39,13 @@ pub enum PageId {
 pub fn build_page_manager<const WIDTH: u32, const HEIGHT: u32>(
     font: &FontRegistry<Font>,
     art: &ArtRegistry,
-) -> PageManager<PageId, WIDTH, HEIGHT> {
+) -> PageManager<LattitudePage, WIDTH, HEIGHT> {
     let mut manager = PageManager::new();
 
     let ctx = PageContext::new(font, art);
 
-    manager.register(PageId::Unbox, unbox_page(&ctx));
-    manager.register(PageId::Splash, splash_page(&ctx));
+    manager.register(LattitudePage::Unbox, unbox_page(&ctx));
+    manager.register(LattitudePage::Splash, splash_page(&ctx));
 
     manager
 }

@@ -44,7 +44,7 @@ pub fn splash_page(ctx: &PageContext) -> Page {
                 400,
                 ctx.font(Font::Typewriter),
                 20.0,
-                Source::Static("Låttitüdé".to_string())
+                Source::Static("Tacos".to_string())
             )
         );
     })
