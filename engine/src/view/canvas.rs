@@ -59,14 +59,14 @@ impl Component {
 
             let x_offset = match self.horizontal_alignment {
                 HorizontalAlignment::Left => self.point.x,
-                HorizontalAlignment::Center => self.point.x - (dimensions.width() as i32 / 2),
-                HorizontalAlignment::Right => self.point.x - dimensions.width() as i32,
+                HorizontalAlignment::Center => self.point.x - (dimensions.width() / 2),
+                HorizontalAlignment::Right => self.point.x - dimensions.width(),
             };
 
             let y_offset = match self.vertical_alignment {
                 VerticalAlignment::Top => self.point.y,
-                VerticalAlignment::Middle => self.point.y - (dimensions.height() as i32 / 2),
-                VerticalAlignment::Bottom => self.point.y - dimensions.height() as i32,
+                VerticalAlignment::Middle => self.point.y - (dimensions.height() / 2),
+                VerticalAlignment::Bottom => self.point.y - dimensions.height(),
             };
 
             for pixel in rendered.iter() {

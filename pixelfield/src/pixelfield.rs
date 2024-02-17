@@ -1,26 +1,26 @@
 use crate::color::Color;
-use std::cmp::Ordering;
+use std::cmp::{max, min, Ordering};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::ops::{Mul, Range};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct Point {
-    pub x: i32,
-    pub y: i32,
+    pub x: u32,
+    pub y: u32,
 }
 
 impl From<(i32, i32)> for Point {
     fn from((x, y): (i32, i32)) -> Self {
-        Self { x, y }
+        Self { x: x.abs() as u32, y: y.abs() as u32 }
     }
 }
 
 impl From<(u32, u32)> for Point {
     fn from((x, y): (u32, u32)) -> Self {
         Self {
-            x: x as i32,
-            y: y as i32,
+            x,
+            y
         }
     }
 }
@@ -42,11 +42,11 @@ impl Rectangle {
         (*self).into()
     }
 
-    pub fn x_range(&self) -> Range<i32> {
+    pub fn x_range(&self) -> Range<u32> {
         self.nw.x..self.se.x
     }
 
-    pub fn y_range(&self) -> Range<i32> {
+    pub fn y_range(&self) -> Range<u32> {
         self.nw.y..self.se.y
     }
 
@@ -56,16 +56,16 @@ impl Rectangle {
             Ordering::Less => Rectangle {
                 nw: self.nw,
                 se: Point {
-                    x: self.nw.x + dimensions.height as i32,
-                    y: self.nw.y + dimensions.height as i32,
+                    x: self.nw.x + dimensions.height,
+                    y: self.nw.y + dimensions.height,
                 },
             },
             Ordering::Equal => *self,
             Ordering::Greater => Rectangle {
                 nw: self.nw,
                 se: Point {
-                    x: self.nw.y + dimensions.width as i32,
-                    y: self.nw.y + dimensions.width as i32,
+                    x: self.nw.y + dimensions.width,
+                    y: self.nw.y + dimensions.width,
                 },
             },
         }
@@ -75,8 +75,8 @@ impl Rectangle {
         let dimensions = self.dimensions();
 
         Point {
-            x: self.nw.x + ((dimensions.width as i32 - 1) / 2),
-            y: self.nw.y + ((dimensions.height as i32 - 1) / 2),
+            x: self.nw.x + ((dimensions.width - 1) / 2),
+            y: self.nw.y + ((dimensions.height - 1) / 2),
         }
     }
 }
@@ -210,11 +210,11 @@ impl PixelField {
     }
 
     pub fn bounding_box(&self) -> Rectangle {
-        let mut min_x = i32::MAX;
-        let mut min_y = i32::MAX;
+        let mut min_x = u32::MAX;
+        let mut min_y = u32::MAX;
 
-        let mut max_x = i32::MIN;
-        let mut max_y = i32::MIN;
+        let mut max_x = u32::MIN;
+        let mut max_y = u32::MIN;
 
         for point in self.pixels.keys() {
             if point.x < min_x {
@@ -294,8 +294,8 @@ impl PixelField {
 
         let mut scaled = PixelField::default();
 
-        for x in original_bbox.nw.x..(original_bbox.nw.x + scaled_dimensions.width() as i32) {
-            for y in original_bbox.nw.y..(original_bbox.nw.y + scaled_dimensions.height() as i32) {
+        for x in original_bbox.nw.x..(original_bbox.nw.x + scaled_dimensions.width()) {
+            for y in original_bbox.nw.y..(original_bbox.nw.y + scaled_dimensions.height()) {
                 let scaled_x = (x as f32 * 1.0 / scale) as u32;
                 let scaled_y = (y as f32 * 1.0 / scale) as u32;
 
@@ -373,39 +373,14 @@ impl PixelField {
     pub fn to_bmp(&self, dimensions: Option<(u32, u32)>) -> bmp::Image {
         let bbox = self.bounding_box();
 
-        let x_adjustment = if bbox.x_range().start < 0 {
-            bbox.x_range().start.abs()
-        } else {
-            0
-        };
+        let x_adjustment = bbox.x_range().start;
+        let y_adjustment = bbox.y_range().start;
 
-        let y_adjustment = if bbox.y_range().start < 0 {
-            bbox.y_range().start.abs()
-        } else {
-            0
-        };
+        let original_width = (bbox.x_range().end + x_adjustment + 1) as u32;
+        let width = dimensions.map_or(original_width, |(width, _)| max(original_width, width));
 
-        let width = if let Some((width, _)) = dimensions {
-            let original_width = (bbox.x_range().end + x_adjustment + 1) as u32;
-            if original_width < width {
-                width
-            } else {
-                original_width
-            }
-        } else {
-            (bbox.x_range().end + x_adjustment + 1) as u32
-        };
-
-        let height = if let Some((_, height)) = dimensions {
-            let original_height = (bbox.y_range().end + y_adjustment + 1) as u32;
-            if original_height < height {
-                height
-            } else {
-                original_height
-            }
-        } else {
-            (bbox.y_range().end + y_adjustment + 1) as u32
-        };
+        let original_height = (bbox.y_range().end + y_adjustment + 1) as u32;
+        let height = dimensions.map_or(original_height, |(height, _)| max(original_height, height));
 
         let mut bmp = bmp::Image::new(width, height);
 

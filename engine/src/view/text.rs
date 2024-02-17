@@ -70,13 +70,13 @@ impl Text {
 
     fn render_glyph(&self, pixel_field: &mut PixelField, glyph: &SectionGlyph) {
         if let Some(glyph) = self.font.outline_glyph(glyph.glyph.clone()) {
-            let x_offset = glyph.px_bounds().min.x;
-            let y_offset = glyph.px_bounds().min.y;
+            let x_offset = glyph.px_bounds().min.x as u32;
+            let y_offset = glyph.px_bounds().min.y as u32;
             glyph.draw(|x, y, c| {
                 let color_val = 255 - ((255.0 * c) as u8);
                 if c > 0.10 {
                     pixel_field.set(
-                        ((x as f32 + x_offset) as i32, (y as f32 + y_offset) as i32),
+                        ((x + x_offset), (y + y_offset)),
                         Color::Rgb(Rgb {
                             r: color_val,
                             g: color_val,
