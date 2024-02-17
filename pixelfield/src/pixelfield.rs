@@ -32,6 +32,13 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
+    pub fn new<P: Into<Point>, Q: Into<Point>>(nw: P, se: Q) -> Self {
+        Rectangle {
+            nw: nw.into(),
+            se: se.into(),
+        }
+    }
+
     pub fn contains<P: Into<Point>>(&self, point: P) -> bool {
         let point = point.into();
 
@@ -53,21 +60,9 @@ impl Rectangle {
     pub fn bounding_square(&self) -> Rectangle {
         let dimensions = self.dimensions();
         match dimensions.width.cmp(&dimensions.height) {
-            Ordering::Less => Rectangle {
-                nw: self.nw,
-                se: Point {
-                    x: self.nw.x + dimensions.height,
-                    y: self.nw.y + dimensions.height,
-                },
-            },
+            Ordering::Less => Rectangle::new(self.nw, (self.nw.x + dimensions.height, self.nw.y + dimensions.height)),
             Ordering::Equal => *self,
-            Ordering::Greater => Rectangle {
-                nw: self.nw,
-                se: Point {
-                    x: self.nw.y + dimensions.width,
-                    y: self.nw.y + dimensions.width,
-                },
-            },
+            Ordering::Greater => Rectangle::new(self.nw, (self.nw.x + dimensions.width, self.nw.y + dimensions.width)),
         }
     }
 
@@ -83,10 +78,7 @@ impl Rectangle {
 
 impl From<((i32, i32), (i32, i32))> for Rectangle {
     fn from((nw, se): ((i32, i32), (i32, i32))) -> Self {
-        Self {
-            nw: nw.into(),
-            se: se.into(),
-        }
+        Self::new(nw, se)
     }
 }
 
@@ -231,10 +223,7 @@ impl PixelField {
             }
         }
 
-        Rectangle {
-            nw: (min_x, min_y).into(),
-            se: (max_x, max_y).into(),
-        }
+        Rectangle::new((min_x, min_y), (max_x, max_y))
     }
 
     pub fn dimensions(&self) -> Dimensions {
@@ -250,14 +239,7 @@ impl PixelField {
         // inflated to be a square to allow rotation
         let rotated_bbox = original_bbox.bounding_square();
         println!("rotated bbox : {:?}", rotated_bbox);
-        let rotated_bbox = Rectangle {
-            nw: rotated_bbox.nw,
-            se: Point {
-                x: rotated_bbox.se.x * 2,
-                y: rotated_bbox.se.y * 2,
-            },
-        };
-
+        let rotated_bbox = Rectangle::new(rotated_bbox.nw, (rotated_bbox.se.x * 2, rotated_bbox.se.y * 2));
         let mut rotated = PixelField::default();
 
         let cos = radians.cos();
@@ -416,12 +398,7 @@ mod test {
 
     #[test]
     fn origin_bbox_to_dimensions() {
-        let rect = Rectangle {
-            nw: (0, 0).into(),
-            se: (100, 200).into(),
-        };
-
-        let dims = rect.dimensions();
+        let dims = Rectangle::new((0, 0), (100, 200)).dimensions();
 
         assert_eq!(100, dims.width);
         assert_eq!(200, dims.height);
@@ -429,12 +406,7 @@ mod test {
 
     #[test]
     fn origin_bbox_to_center() {
-        let rect = Rectangle {
-            nw: (0, 0).into(),
-            se: (100, 200).into(),
-        };
-
-        let point = rect.center_point();
+        let point = Rectangle::new((0, 0), (100, 200)).center_point();
 
         assert_eq!(49, point.x);
         assert_eq!(99, point.y);
@@ -442,12 +414,7 @@ mod test {
 
     #[test]
     fn offset_bbox_to_dimensions() {
-        let rect = Rectangle {
-            nw: (20, 20).into(),
-            se: (100, 200).into(),
-        };
-
-        let dims = rect.dimensions();
+        let dims = Rectangle::new((20, 20), (100, 200)).dimensions();
 
         assert_eq!(80, dims.width);
         assert_eq!(180, dims.height);
@@ -455,13 +422,9 @@ mod test {
 
     #[test]
     fn bounding_square() {
-        let rect = Rectangle {
-            nw: (8, 6).into(),
-            se: (493, 387).into(),
-        };
+        let dims = Rectangle::new((8,6), (493, 387 )).bounding_square().dimensions();
 
-        let square = rect.bounding_square();
-
-        println!("{:#?}", square.dimensions());
+        assert_eq!(485, dims.width);
+        assert_eq!(485, dims.height);
     }
 }
