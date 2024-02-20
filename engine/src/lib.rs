@@ -6,6 +6,8 @@ pub mod font;
 pub mod page;
 pub mod view;
 
+pub mod integration;
+
 pub fn page<F: Fn(&mut Canvas)>(configure: F) -> Page {
     let mut canvas = Canvas::new();
     configure(&mut canvas);

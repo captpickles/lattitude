@@ -3,7 +3,7 @@ mod api;
 use ab_glyph::FontRef;
 use actix::Message;
 use chrono::{DateTime, Duration, Timelike, Utc};
-use engine::controller::Controller;
+use engine::controller::{Controller, Controllers};
 use engine::view::canvas::Canvas;
 use engine::view::text::FormattedText;
 use engine::view::Renderable;
@@ -15,8 +15,30 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use engine::integration::Integration;
 
 const BASE_URL: &str = "https://app.birdweather.com/api/v1/stations";
+
+pub enum BirdNetControllers {
+    RecentDetections,
+}
+
+pub struct BirdNet {
+
+}
+
+impl Integration for BirdNet {
+    type Configuration = ();
+    type Controllers = BirdNetControllers;
+
+    fn create_controller(&self, controller: Self::Controllers) -> impl Controller {
+        match controller {
+            BirdNetControllers::RecentDetections => {
+                BirdNetRecentDetections::new()
+            }
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Configuration {
@@ -30,13 +52,13 @@ pub struct RecentDetections {
 }
 
 #[derive(Default)]
-pub struct BirdNet {
+pub struct BirdNetRecentDetections {
     configuration: Option<Configuration>,
     last_fetch: Option<DateTime<Utc>>,
     detections: VecDeque<api::Detection>,
 }
 
-impl BirdNet {
+impl BirdNetRecentDetections {
     pub fn new() -> Self {
         Self {
             configuration: None,
@@ -46,9 +68,18 @@ impl BirdNet {
     }
 }
 
-impl Controller for BirdNet {
-    type Output = RecentDetections;
+impl Controller for BirdNetRecentDetections {
+    type Integration = BirdNet;
     type Configuration = Configuration;
+    type Output = RecentDetections;
+
+    fn identifier(&self) -> String {
+        "birdNET".to_string()
+    }
+
+    fn cadence(&self) -> Duration {
+        Duration::minutes(10)
+    }
 
     fn configure(&mut self, configuration: Option<Self::Configuration>) {
         println!("configure! {:?}", configuration);
@@ -106,13 +137,6 @@ impl Controller for BirdNet {
         None
     }
 
-    fn cadence(&self) -> Duration {
-        Duration::minutes(10)
-    }
-
-    fn identifier(&self) -> String {
-        "birdNET".to_string()
-    }
 }
 
 pub struct BirdList {

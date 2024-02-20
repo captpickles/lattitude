@@ -1,3 +1,4 @@
+use crate::integration::Integration;
 use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -8,6 +9,7 @@ use tokio::sync::Mutex;
 use toml::Value;
 
 pub trait Controller: Send + 'static {
+    type Integration: Integration;
     type Configuration: Serialize + DeserializeOwned + Send;
 
     type Output: Send + PartialEq + 'static;
@@ -16,9 +18,20 @@ pub trait Controller: Send + 'static {
 
     fn cadence(&self) -> Duration;
 
-    fn configure(&mut self, configuration: Option<Self::Configuration>);
+    /*
+    fn configure(&mut self, controller_config: Option<Config<Self>>)
+    where
+        Self: Sized;
+
+     */
+    fn configure(&mut self, controller_config: Option<Self::Configuration>);
 
     fn update(&mut self) -> impl Future<Output = Option<Self::Output>> + Send + Sync;
+}
+
+pub struct Config<C: Controller> {
+    integration_config: <<C as Controller>::Integration as Integration>::Configuration,
+    controller_config: C::Configuration,
 }
 
 pub struct ControllerManager<C, Configuration, Output>
