@@ -60,9 +60,21 @@ impl Rectangle {
     pub fn bounding_square(&self) -> Rectangle {
         let dimensions = self.dimensions();
         match dimensions.width.cmp(&dimensions.height) {
-            Ordering::Less => Rectangle::new(self.nw, (self.nw.x + dimensions.height as i32, self.nw.y + dimensions.height as i32)),
+            Ordering::Less => Rectangle::new(
+                self.nw,
+                (
+                    self.nw.x + dimensions.height as i32,
+                    self.nw.y + dimensions.height as i32,
+                ),
+            ),
             Ordering::Equal => *self,
-            Ordering::Greater => Rectangle::new(self.nw, (self.nw.x + dimensions.width as i32, self.nw.y + dimensions.width as i32)),
+            Ordering::Greater => Rectangle::new(
+                self.nw,
+                (
+                    self.nw.x + dimensions.width as i32,
+                    self.nw.y + dimensions.width as i32,
+                ),
+            ),
         }
     }
 
@@ -239,7 +251,10 @@ impl PixelField {
         // inflated to be a square to allow rotation
         let rotated_bbox = original_bbox.bounding_square();
         println!("rotated bbox : {:?}", rotated_bbox);
-        let rotated_bbox = Rectangle::new(rotated_bbox.nw, (rotated_bbox.se.x * 2, rotated_bbox.se.y * 2));
+        let rotated_bbox = Rectangle::new(
+            rotated_bbox.nw,
+            (rotated_bbox.se.x * 2, rotated_bbox.se.y * 2),
+        );
         let mut rotated = PixelField::default();
 
         let cos = radians.cos();
@@ -447,7 +462,9 @@ mod test {
 
     #[test]
     fn bounding_square() {
-        let dims = Rectangle::new((8,6), (493, 387 )).bounding_square().dimensions();
+        let dims = Rectangle::new((8, 6), (493, 387))
+            .bounding_square()
+            .dimensions();
 
         assert_eq!(485, dims.width);
         assert_eq!(485, dims.height);

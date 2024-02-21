@@ -1,14 +1,55 @@
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+static PROVIDER_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+#[derive(Debug, Clone)]
+pub struct Provider {
+    id: usize,
+    name: String,
+}
+
+impl PartialEq for Provider {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Provider {
+    pub fn new(name: &str) -> Self {
+        Self {
+            id: PROVIDER_COUNTER.fetch_add(1, Ordering::Relaxed),
+            name: name.to_string(),
+        }
+    }
+}
+
+pub struct DataKey<T>
+where
+    T: Clone + Debug + 'static,
+{
+    provider: Provider,
+    _marker: PhantomData<T>,
+}
+
+impl<T> Debug for DataKey<T>
+where
+    T: Clone + Debug + 'static,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.provider)
+    }
+}
+
 pub struct StateManager {
-    primary: HashMap<TypeId, Box<dyn Any>>,
+    primary: HashMap<TypeId, ProviderEntry>,
     convertable: HashMap<TypeId, Vec<ConverterEntry>>,
 }
 
@@ -20,18 +61,22 @@ impl StateManager {
         }
     }
 
-    pub fn register<T>(&mut self, state: Arc<Mutex<T>>)
-        where
-            T: 'static,
+    pub fn register<T>(&mut self, provider: &Provider, state: Arc<Mutex<T>>)
+    where
+        T: 'static,
     {
         let key = TypeId::of::<T>();
-        self.primary.insert(key, Box::new(state));
+        let entry = ProviderEntry {
+            provider: provider.clone(),
+            state: Box::new(state),
+        };
+        self.primary.insert(key, entry);
     }
 
-    pub fn alias<Input, Output>(&mut self)
-        where
-            Input: Debug + Clone + 'static,
-            Output: Debug + From<Input> + 'static,
+    pub fn provides<Input, Output>(&mut self)
+    where
+        Input: Debug + Clone + 'static,
+        Output: Debug + From<Input> + 'static,
     {
         let converter = FromConverter::<Input, Output>::new();
 
@@ -45,14 +90,33 @@ impl StateManager {
         });
     }
 
-    pub async fn get<T>(&self) -> Vec<T>
-        where
-            T: Debug + Clone + 'static,
+    pub fn providers_for<T>(&self) -> Vec<DataKey<T>>
+    where
+        T: Debug + Clone + 'static,
+    {
+        let mut keys = Vec::new();
+        if let Some(entries) = self.convertable.get(&TypeId::of::<T>()) {
+            for each in entries {
+                if let Some(primary) = self.primary.get(&each.input_key) {
+                    keys.push(DataKey {
+                        provider: primary.provider.clone(),
+                        _marker: Default::default(),
+                    })
+                }
+            }
+        }
+
+        keys
+    }
+
+    pub async fn get_all<T>(&self) -> Vec<T>
+    where
+        T: Debug + Clone + 'static,
     {
         let key = TypeId::of::<T>();
 
         if let Some(primary) = self.primary.get(&key) {
-            if let Some(value) = primary.downcast_ref::<Arc<Mutex<T>>>() {
+            if let Some(value) = primary.state.downcast_ref::<Arc<Mutex<T>>>() {
                 return vec![value.lock().await.clone()];
             }
         }
@@ -65,7 +129,7 @@ impl StateManager {
             } in entries
             {
                 if let Some(primary) = self.primary.get(input_key) {
-                    let output = converter.convert(primary).await;
+                    let output = converter.convert(&primary.state).await;
                     if let Some(output) = output {
                         if let Some(output) = output.downcast_ref::<T>() {
                             values.push(output.clone())
@@ -77,6 +141,38 @@ impl StateManager {
 
         values
     }
+
+    pub async fn get<T>(&self, key: DataKey<T>) -> Option<T>
+    where
+        T: Clone + Debug + 'static,
+    {
+        if let Some(entries) = self.convertable.get(&TypeId::of::<T>()) {
+            if let Some(provider_entry) = entries.iter().find(|inner| {
+                if let Some(primary) = self.primary.get(&inner.input_key) {
+                    if primary.provider == key.provider {
+                        return true;
+                    }
+                }
+                false
+            }) {
+                if let Some(primary) = self.primary.get(&provider_entry.input_key) {
+                    let output = provider_entry.converter.convert(&primary.state).await;
+                    if let Some(output) = output {
+                        if let Some(output) = output.downcast_ref::<T>() {
+                            return Some(output.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+}
+
+struct ProviderEntry {
+    provider: Provider,
+    state: Box<dyn Any>,
 }
 
 struct ConverterEntry {
@@ -104,9 +200,9 @@ impl<In, Out> FromConverter<In, Out> {
 }
 
 impl<In, Out> Converter for FromConverter<In, Out>
-    where
-        In: Debug + Clone + 'static,
-        Out: Debug + From<In> + 'static,
+where
+    In: Debug + Clone + 'static,
+    Out: Debug + From<In> + 'static,
 {
     fn convert<'i>(
         &'i self,
@@ -145,10 +241,10 @@ mod test {
         }
     }
 
-    impl From<AccuWeather> for WindSpeed{
+    impl From<AccuWeather> for WindSpeed {
         fn from(value: AccuWeather) -> Self {
             Self {
-                speed: value.wind_speed
+                speed: value.wind_speed,
             }
         }
     }
@@ -170,7 +266,7 @@ mod test {
     impl From<WeatherChannel> for WindSpeed {
         fn from(value: WeatherChannel) -> Self {
             Self {
-                speed: value.speed_of_the_wind
+                speed: value.speed_of_the_wind,
             }
         }
     }
@@ -183,7 +279,6 @@ mod test {
     #[derive(Clone, Debug)]
     pub struct WindSpeed {
         speed: u32,
-
     }
 
     #[derive(Clone, Debug)]
@@ -192,6 +287,10 @@ mod test {
     #[tokio::test]
     async fn whut() {
         let mut manager = StateManager::new();
+
+        let accuweather_provider = Provider::new("AccuWeather");
+        let weather_channel_provider = Provider::new("The Weather Channel");
+        let birdnet_provider = Provider::new("BirdNET");
 
         let accuweather = Arc::new(Mutex::new(AccuWeather {
             wind_direction: 180,
@@ -203,31 +302,38 @@ mod test {
         }));
         let birdnet = Arc::new(Mutex::new(BirdNet {}));
 
-        manager.register(accuweather.clone());
-        manager.register(weather_channel.clone());
-        manager.register(birdnet.clone());
+        manager.register(&accuweather_provider, accuweather.clone());
+        manager.register(&weather_channel_provider, weather_channel.clone());
+        manager.register(&birdnet_provider, birdnet.clone());
 
-        manager.alias::<AccuWeather, WindDirection>();
-        manager.alias::<WeatherChannel, WindDirection>();
-        manager.alias::<AccuWeather, WindSpeed>();
-        manager.alias::<WeatherChannel, WindSpeed>();
+        manager.provides::<AccuWeather, WindDirection>();
+        manager.provides::<WeatherChannel, WindDirection>();
+        manager.provides::<AccuWeather, WindSpeed>();
+        manager.provides::<WeatherChannel, WindSpeed>();
 
         // not allowed
         //manager.alias::<BirdNet, WindDirection>();
 
-        let values = manager.get::<WindDirection>().await;
+        let keys = manager.providers_for::<WindSpeed>();
+        println!("{:#?}", keys);
+
+        for each in keys {
+            println!("{:?}", manager.get(each).await);
+        }
+
+        let values = manager.get_all::<WindDirection>().await;
         println!("{:#?}", values);
 
         accuweather.lock().await.wind_direction = 99;
         accuweather.lock().await.wind_speed = 42;
 
-        let values = manager.get::<WindDirection>().await;
+        let values = manager.get_all::<WindDirection>().await;
         println!("{:#?}", values);
 
-        let values = manager.get::<WindSpeed>().await;
+        let values = manager.get_all::<WindSpeed>().await;
         println!("{:#?}", values);
 
-        let values = manager.get::<BirdNet>().await;
+        let values = manager.get_all::<BirdNet>().await;
         println!("{:#?}", values);
     }
 }

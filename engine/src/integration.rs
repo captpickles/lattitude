@@ -22,21 +22,22 @@ pub trait ManageableIntegration {
     fn configure<'r>(
         &'r self,
         configuration: Option<toml::Value>,
-    ) -> Pin<Box<dyn Future<Output=()> + 'r>>;
+    ) -> Pin<Box<dyn Future<Output = ()> + 'r>>;
 
-    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'r>>;
+    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync + 'r>>;
 }
 
 pub struct IntegrationManager<I, Configuration>
-    where
-        I: Integration<Configuration=Configuration>,
+where
+    I: Integration<Configuration = Configuration>,
 {
     identifier: String,
     integration: Arc<Mutex<I>>,
 }
 
-impl<I, Configuration> IntegrationManager<I, Configuration> where
-    I: Integration<Configuration=Configuration>
+impl<I, Configuration> IntegrationManager<I, Configuration>
+where
+    I: Integration<Configuration = Configuration>,
 {
     pub fn new(integration: I) -> Self {
         Self {
@@ -46,17 +47,22 @@ impl<I, Configuration> IntegrationManager<I, Configuration> where
     }
 }
 
-impl<I, Configuration> ManageableIntegration for IntegrationManager<I, Configuration> where
-    I: Integration<Configuration=Configuration> {
+impl<I, Configuration> ManageableIntegration for IntegrationManager<I, Configuration>
+where
+    I: Integration<Configuration = Configuration>,
+{
     fn identifier(&self) -> String {
         todo!()
     }
 
-    fn configure<'r>(&'r self, configuration: Option<Value>) -> Pin<Box<dyn Future<Output=()> + 'r>> {
+    fn configure<'r>(
+        &'r self,
+        configuration: Option<Value>,
+    ) -> Pin<Box<dyn Future<Output = ()> + 'r>> {
         todo!()
     }
 
-    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output=()> + Send + Sync + 'r>> {
+    fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync + 'r>> {
         todo!()
     }
 }

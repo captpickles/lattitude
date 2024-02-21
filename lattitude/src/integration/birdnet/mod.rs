@@ -4,6 +4,7 @@ use ab_glyph::FontRef;
 use actix::Message;
 use chrono::{DateTime, Duration, Timelike, Utc};
 use engine::controller::{Controller, Controllers};
+use engine::integration::Integration;
 use engine::view::canvas::Canvas;
 use engine::view::text::FormattedText;
 use engine::view::Renderable;
@@ -15,7 +16,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use engine::integration::Integration;
 
 const BASE_URL: &str = "https://app.birdweather.com/api/v1/stations";
 
@@ -23,9 +23,7 @@ pub enum BirdNetControllers {
     RecentDetections,
 }
 
-pub struct BirdNet {
-
-}
+pub struct BirdNet {}
 
 impl Integration for BirdNet {
     type Configuration = ();
@@ -33,9 +31,7 @@ impl Integration for BirdNet {
 
     fn create_controller(&self, controller: Self::Controllers) -> impl Controller {
         match controller {
-            BirdNetControllers::RecentDetections => {
-                BirdNetRecentDetections::new()
-            }
+            BirdNetControllers::RecentDetections => BirdNetRecentDetections::new(),
         }
     }
 }
@@ -136,7 +132,6 @@ impl Controller for BirdNetRecentDetections {
 
         None
     }
-
 }
 
 pub struct BirdList {
