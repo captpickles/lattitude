@@ -1,7 +1,7 @@
 use crate::display::Display;
 use pixelfield::color::Rgb;
 use pixelfield::pixelfield::PixelField;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub struct BmpDisplay<const WIDTH: u32, const HEIGHT: u32> {
     path: PathBuf,
@@ -29,6 +29,9 @@ impl<const WIDTH: u32, const HEIGHT: u32> Display for BmpDisplay<WIDTH, HEIGHT> 
                 .into(),
             )
         }
-        greyscale.to_bmp(Some((WIDTH, HEIGHT))).save(&self.path);
+        greyscale
+            .to_bmp(Some((WIDTH, HEIGHT)))
+            .save(&self.path)
+            .ok();
     }
 }

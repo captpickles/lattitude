@@ -4,10 +4,11 @@ use std::fmt::{Debug, Formatter};
 use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+
 use tokio::sync::Mutex;
 
+#[derive(Default, Clone)]
 pub struct Model<T>
 where
     T: Clone + Sync + Send + Debug + 'static,
@@ -19,12 +20,6 @@ impl<T> Model<T>
 where
     T: Clone + Sync + Send + Debug + 'static,
 {
-    pub fn new() -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(None)),
-        }
-    }
-
     pub async fn update(&self, value: T) {
         self.inner.lock().await.replace(value);
     }
@@ -56,26 +51,20 @@ where
     }
 }
 
+#[derive(Default)]
 pub struct ModelManager {
     primary: HashMap<TypeId, ProviderEntry>,
     convertable: HashMap<TypeId, Vec<ConverterEntry>>,
 }
 
 impl ModelManager {
-    pub fn new() -> Self {
-        Self {
-            primary: Default::default(),
-            convertable: Default::default(),
-        }
-    }
-
-    pub fn register<T>(&mut self, provider: TypeId, state: Arc<Mutex<Option<T>>>)
+    pub fn register<T>(&mut self, provider: TypeId, state: Model<T>)
     where
-        T: 'static,
+        T: Clone + Sync + Send + Debug + 'static,
     {
         let key = TypeId::of::<T>();
         let entry = ProviderEntry {
-            provider: provider.clone(),
+            provider,
             state: Box::new(state),
         };
         self.primary.insert(key, entry);
@@ -83,7 +72,7 @@ impl ModelManager {
 
     pub fn provides<Input, Output>(&mut self)
     where
-        Input: Debug + Clone + 'static,
+        Input: Debug + Clone + Sync + Send + 'static,
         Output: Debug + From<Input> + 'static,
     {
         let converter = FromConverter::<Input, Output>::new();
@@ -91,7 +80,7 @@ impl ModelManager {
         let output_key = TypeId::of::<Output>();
         let input_key = TypeId::of::<Input>();
 
-        let mut entries = self.convertable.entry(output_key).or_default();
+        let entries = self.convertable.entry(output_key).or_default();
         entries.push(ConverterEntry {
             input_key,
             converter: Box::new(converter),
@@ -107,7 +96,7 @@ impl ModelManager {
             for each in entries {
                 if let Some(primary) = self.primary.get(&each.input_key) {
                     keys.push(ModelKey {
-                        provider: primary.provider.clone(),
+                        provider: primary.provider,
                         _marker: Default::default(),
                     })
                 }
@@ -119,13 +108,13 @@ impl ModelManager {
 
     pub async fn get_all<T>(&self) -> Vec<Option<T>>
     where
-        T: Debug + Clone + 'static,
+        T: Debug + Clone + Sync + Send + 'static,
     {
         let key = TypeId::of::<T>();
 
         if let Some(primary) = self.primary.get(&key) {
-            if let Some(value) = primary.state.downcast_ref::<Arc<Mutex<Option<T>>>>() {
-                return vec![value.lock().await.clone()];
+            if let Some(value) = primary.state.downcast_ref::<Model<T>>() {
+                return vec![value.get().await];
             }
         }
 
@@ -209,7 +198,7 @@ impl<In, Out> FromConverter<In, Out> {
 
 impl<In, Out> Converter for FromConverter<In, Out>
 where
-    In: Debug + Clone + 'static,
+    In: Debug + Clone + Sync + Send + 'static,
     Out: Debug + From<In> + 'static,
 {
     fn convert<'i>(
@@ -217,8 +206,8 @@ where
         input: &'i Box<dyn Any>,
     ) -> Pin<Box<dyn Future<Output = Option<Box<dyn Any>>> + '_>> {
         Box::pin(async move {
-            if let Some(input_value) = input.downcast_ref::<Arc<Mutex<Option<In>>>>() {
-                let input_value = input_value.lock().await;
+            if let Some(input_value) = input.downcast_ref::<Model<In>>() {
+                let input_value = input_value.get().await;
                 let output_value: Option<Out> = input_value.clone().map(|inner| inner.into());
                 let boxed: Box<dyn Any> = Box::new(output_value);
                 return Some(boxed);
@@ -232,8 +221,6 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
 
     #[derive(Clone, Debug)]
     pub struct AccuWeather {

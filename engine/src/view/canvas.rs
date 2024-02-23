@@ -1,8 +1,8 @@
+use crate::model::ModelManager;
 use crate::view::{HorizontalAlignment, Renderable, VerticalAlignment};
 use pixelfield::pixelfield::{PixelField, Point};
 use std::future::Future;
 use std::pin::Pin;
-use crate::model::ModelManager;
 
 #[derive(Default)]
 pub struct Canvas {
@@ -33,7 +33,10 @@ impl Canvas {
 }
 
 impl Renderable for Canvas {
-    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             let mut pixel_field = PixelField::default();
 

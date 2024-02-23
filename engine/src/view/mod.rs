@@ -1,7 +1,7 @@
+use crate::model::ModelManager;
 use pixelfield::pixelfield::PixelField;
 use std::future::Future;
 use std::pin::Pin;
-use crate::model::ModelManager;
 
 pub mod canvas;
 pub mod pixels;
@@ -23,5 +23,8 @@ pub enum VerticalAlignment {
 }
 
 pub trait Renderable: Send + Sync {
-    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>>;
+    fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>>;
 }

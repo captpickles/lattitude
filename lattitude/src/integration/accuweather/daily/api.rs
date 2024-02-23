@@ -1,8 +1,7 @@
-
-use std::hash::{Hash, Hasher};
+use crate::integration::accuweather::api::{Ice, Rain, Snow, TotalLiquid, Wind};
 use chrono::{DateTime, Local};
 use serde::Deserialize;
-use crate::integration::accuweather::api::{Ice, Rain, Snow, TotalLiquid, Wind};
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -51,10 +50,9 @@ pub struct TempValue {
 
 impl Hash for TempValue {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }
-
 
 #[derive(Debug, Clone, Deserialize, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]

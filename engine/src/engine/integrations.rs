@@ -1,17 +1,14 @@
-use crate::context::Context;
+use crate::global_configuration::GlobalConfiguration;
 use crate::integration::Integration;
-use crate::model::ModelManager;
+use crate::model::{Model, ModelManager};
 use chrono::{DateTime, Duration, Utc};
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::future::Future;
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::pin::Pin;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use toml::Value;
@@ -19,7 +16,7 @@ use toml::Value;
 pub trait ManageableIntegration {
     fn configure<'r>(
         &'r self,
-        world: &'r Context,
+        world: &'r GlobalConfiguration,
         configuration: Option<toml::Value>,
     ) -> Pin<Box<dyn Future<Output = ()> + 'r>>;
 
@@ -41,7 +38,12 @@ where
     pub fn new(integration: I, cadences: HashMap<I::Discriminant, Duration>) -> Self {
         Self {
             integration: Arc::new(Mutex::new(integration)),
-            updates: Arc::new(Mutex::new(HashMap::new())),
+            updates: Arc::new(Mutex::new(
+                cadences
+                    .iter()
+                    .map(|(discriminant, cadence)| (*discriminant, UpdateEntry::new(*cadence)))
+                    .collect(),
+            )),
         }
     }
 }
@@ -78,7 +80,7 @@ where
 {
     fn configure<'r>(
         &'r self,
-        world: &'r Context,
+        global_configuration: &'r GlobalConfiguration,
         configuration: Option<Value>,
     ) -> Pin<Box<dyn Future<Output = ()> + 'r>> {
         let controller = self.integration.clone();
@@ -86,49 +88,48 @@ where
             let mut integration = controller.lock().await;
             if let Some(configuration) = configuration {
                 if let Ok(config) = <I as Integration>::Configuration::deserialize(configuration) {
-                    integration.configure(Some(config));
+                    integration
+                        .configure(global_configuration.clone(), Some(config))
+                        .await;
                 } else {
-                    integration.configure(None);
+                    integration
+                        .configure(global_configuration.clone(), None)
+                        .await;
                 }
             } else {
-                integration.configure(None);
+                integration
+                    .configure(global_configuration.clone(), None)
+                    .await;
             }
         })
     }
 
     fn update<'r>(&'r self) -> Pin<Box<dyn Future<Output = ()> + Send + Sync + 'r>> {
-
         Box::pin(async move {
-            let updates = self.updates.lock().await;
+            let mut updates = self.updates.lock().await;
 
             let mut integration = self.integration.lock().await;
 
-            for (discriminant, entry) in updates.iter() {
+            for (discriminant, entry) in updates.iter_mut() {
                 if entry.should_update() {
                     integration.update(*discriminant).await;
+                    entry.mark_updated();
                 }
             }
         })
     }
 }
 
-static INTEGRATION_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
 struct IntegrationEntry {
     managed: Box<dyn ManageableIntegration>,
 }
 
+#[derive(Default)]
 pub struct Integrations {
     integrations: Vec<IntegrationEntry>,
 }
 
 impl Integrations {
-    pub fn new() -> Self {
-        Self {
-            integrations: vec![],
-        }
-    }
-
     pub fn register<I>(&mut self, state_manager: &mut ModelManager, integration: I)
     where
         I: Integration,
@@ -161,9 +162,9 @@ impl<'ctx, I: Integration> IntegrationContext<'ctx, I> {
         self.cadences.insert(discriminant, cadence);
     }
 
-    pub fn register_model<T>(&mut self, state: Arc<Mutex<Option<T>>>) -> ModelRegistration<T>
+    pub fn register_model<T>(&mut self, state: Model<T>) -> ModelRegistration<T>
     where
-        T: 'static,
+        T: Clone + Debug + Sync + Send + 'static,
     {
         self.model_manager.register(TypeId::of::<I>(), state);
         ModelRegistration {
@@ -180,9 +181,9 @@ pub struct ModelRegistration<'ctx, M> {
 
 impl<M> ModelRegistration<'_, M>
 where
-    M: Debug + Clone + 'static,
+    M: Debug + Clone + Sync + Send + 'static,
 {
-    pub fn provides<Output>(mut self) -> Self
+    pub fn provides<Output>(self) -> Self
     where
         Output: Debug + From<M> + 'static,
     {

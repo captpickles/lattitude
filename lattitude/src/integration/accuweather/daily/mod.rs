@@ -1,35 +1,31 @@
 pub mod api;
 
+use crate::integration::accuweather::daily::api::DailyForecast;
+use crate::integration::accuweather::{AccuWeather, Configuration};
+use chrono::Duration;
+use engine::model::Model;
 use std::future::Future;
 use std::sync::Arc;
-use chrono::Duration;
 use tokio::sync::Mutex;
-use crate::integration::accuweather::AccuWeather;
-use crate::integration::accuweather::daily::api::DailyForecast;
 
 pub struct Daily {
-    model: Arc<Mutex<Option<Vec<DailyForecast>>>>
+    model: Model<Vec<DailyForecast>>,
 }
 
 impl Daily {
     pub fn new() -> Self {
         Self {
-            model: Arc::new(Mutex::new( None ) )
+            model: Model::default(),
         }
     }
 
-    pub fn model(&self) -> Arc<Mutex<Option<Vec<DailyForecast>>>> {
+    pub fn model(&self) -> Model<Vec<DailyForecast>> {
         self.model.clone()
     }
-
 }
 
 impl Daily {
-
-
-    fn update(&mut self) -> impl Future<Output=()> + Send + Sync {
-        async move {
-            todo!()
-        }
+    pub fn update(&mut self, config: &Configuration) -> impl Future<Output = ()> + Send + Sync {
+        async move { todo!() }
     }
 }

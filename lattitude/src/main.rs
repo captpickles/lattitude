@@ -2,11 +2,11 @@
 
 use crate::art::{build_art_registry, Art};
 use crate::cli::Cli;
-use crate::display::bmp::BmpDisplay;
 use crate::font::{build_font_registry, Font};
 use crate::integration::birdnet::{BirdList, BirdNetRecentDetections};
 use crate::page::{build_page_manager, LattitudePage};
 use clap::Parser;
+use engine::display::bmp::BmpDisplay;
 use engine::page::PageManager;
 use engine::view::canvas::Canvas;
 use engine::view::pixels::Pixels;

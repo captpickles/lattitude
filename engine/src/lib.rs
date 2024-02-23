@@ -8,8 +8,9 @@ pub mod view;
 pub mod integration;
 pub mod model;
 
-pub mod context;
+pub mod global_configuration;
 
+pub mod display;
 pub mod engine;
 
 pub fn page<F: Fn(&mut Canvas)>(configure: F) -> Page {

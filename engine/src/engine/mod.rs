@@ -1,31 +1,22 @@
 pub mod integrations;
 
 use crate::engine::integrations::Integrations;
-use crate::integration::{Integration};
+use crate::integration::Integration;
 use crate::model::ModelManager;
 
+#[derive(Default)]
 pub struct Engine {
     state_manager: ModelManager,
     integrations: Integrations,
 }
 
 impl Engine {
-    pub fn new() -> Self {
-        Self {
-            state_manager: ModelManager::new(),
-            integrations: Integrations::new(),
-            //controllers: Controllers::new(),
-        }
-    }
-
     pub fn register<I: Integration>(&mut self, integration: I) {
         self.integrations
             .register(&mut self.state_manager, integration);
     }
 
-    pub async fn run(&self)  {
-
-    }
+    pub async fn run(&self) {}
 }
 
 #[cfg(test)]
@@ -34,8 +25,8 @@ mod test {
 
     use chrono::Duration;
 
-    use crate::engine::Engine;
     use crate::engine::integrations::IntegrationContext;
+    use crate::engine::Engine;
     use crate::integration::{Integration, IntegrationInfo};
 
     struct AccuWeather {

@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use crate::model::{ModelKey, ModelManager};
 use crate::view::Renderable;
 use ab_glyph::{Font, FontRef, PxScale};
 use glyph_brush_layout::{
@@ -7,16 +7,16 @@ use glyph_brush_layout::{
 };
 use pixelfield::color::{Color, Rgb};
 use pixelfield::pixelfield::PixelField;
+use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::model::{ModelKey, ModelManager};
 
 pub enum Source {
     Static(String),
     Managed(ModelKey<String>),
-    Dynamic(Arc<Mutex<Option<String>>>)
+    Dynamic(Arc<Mutex<Option<String>>>),
 }
 
 pub struct Text {
@@ -93,16 +93,15 @@ impl Text {
 }
 
 impl Renderable for Text {
-    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             let text = match &self.source {
                 Source::Static(inner) => Some(inner.clone()),
-                Source::Managed(inner) => {
-                    state_manager.get(inner).await
-                }
-                Source::Dynamic(inner) => {
-                    inner.lock().await.as_ref().cloned()
-                }
+                Source::Managed(inner) => state_manager.get(inner).await,
+                Source::Dynamic(inner) => inner.lock().await.as_ref().cloned(),
             };
 
             if let Some(text) = text {
@@ -152,7 +151,10 @@ where
     Input: Sync + Debug + Clone + Send + 'static,
     FnIn: From<Input> + Send,
 {
-    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             //if let Some(locked) = &*self.input_state.lock().await {
             if let Some(value) = state_manager.get(&self.input_state).await {

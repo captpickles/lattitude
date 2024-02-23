@@ -1,9 +1,8 @@
+use crate::model::ModelManager;
 use crate::view::Renderable;
 use pixelfield::pixelfield::PixelField;
 use std::future::Future;
-use std::os::macos::raw::stat;
 use std::pin::Pin;
-use crate::model::ModelManager;
 
 pub struct Scale<R: Renderable> {
     inner: R,
@@ -17,7 +16,10 @@ impl<R: Renderable> Scale<R> {
 }
 
 impl<R: Renderable> Renderable for Scale<R> {
-    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             self.inner
                 .render(state_manager)

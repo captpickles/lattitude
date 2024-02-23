@@ -1,3 +1,4 @@
+use crate::model::ModelManager;
 use crate::view::canvas::Canvas;
 use crate::view::Renderable;
 use pixelfield::pixelfield::PixelField;
@@ -6,7 +7,6 @@ use std::future::Future;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
-use crate::model::ModelManager;
 
 pub struct Page {
     canvas: Arc<Canvas>,
@@ -21,7 +21,10 @@ impl Page {
         }
     }
 
-    pub fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = PixelField> + 'r>> {
+    pub fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = PixelField> + 'r>> {
         Box::pin(async move { self.canvas.render(state_manager).await.unwrap_or_default() })
     }
 }

@@ -1,5 +1,5 @@
-use std::hash::{Hash, Hasher};
 use serde::Deserialize;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Deserialize, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
@@ -16,7 +16,7 @@ pub struct WindSpeed {
 
 impl Hash for WindSpeed {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }
 
@@ -35,7 +35,7 @@ pub struct TotalLiquid {
 
 impl Hash for TotalLiquid {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }
 
@@ -47,7 +47,7 @@ pub struct Snow {
 
 impl Hash for Snow {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }
 
@@ -59,7 +59,7 @@ pub struct Rain {
 
 impl Hash for Rain {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }
 
@@ -71,6 +71,6 @@ pub struct Ice {
 
 impl Hash for Ice {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }

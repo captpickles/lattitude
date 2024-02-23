@@ -5,6 +5,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use crate::engine::integrations::IntegrationContext;
+use crate::global_configuration::GlobalConfiguration;
 
 pub struct IntegrationInfo {
     pub name: String,
@@ -24,12 +25,17 @@ pub trait Integration: Send + Sync + 'static {
     fn info() -> IntegrationInfo;
 
     fn integrate(&self, context: &mut IntegrationContext<Self>)
-        where Self: Sized;
+    where
+        Self: Sized;
 
-    fn configure(&mut self, controller_config: Option<Self::Configuration>);
+    fn configure(
+        &mut self,
+        global_configuration: GlobalConfiguration,
+        integration_configuration: Option<Self::Configuration>,
+    ) -> impl Future<Output = ()> + Send + Sync;
 
-    fn update(&mut self, discriminant: Self::Discriminant) -> impl Future<Output = ()> + Send + Sync;
-    //type Controllers;
-
-    //fn create_controller(&self, controller: Self::Controllers) -> impl Controller;
+    fn update(
+        &mut self,
+        discriminant: Self::Discriminant,
+    ) -> impl Future<Output = ()> + Send + Sync;
 }

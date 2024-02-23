@@ -1,7 +1,6 @@
-
-use std::hash::{Hash, Hasher};
 use chrono::{DateTime, Local};
 use serde::Deserialize;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Envelope(pub Vec<HourlyForecast>);
@@ -25,6 +24,6 @@ pub struct HourlyTemperature {
 
 impl Hash for HourlyTemperature {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write( &self.value.to_be_bytes())
+        state.write(&self.value.to_be_bytes())
     }
 }

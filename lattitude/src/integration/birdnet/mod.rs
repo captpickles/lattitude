@@ -3,7 +3,10 @@ mod api;
 use ab_glyph::FontRef;
 use actix::Message;
 use chrono::{DateTime, Duration, Timelike, Utc};
+use engine::engine::integrations::IntegrationContext;
+use engine::global_configuration::GlobalConfiguration;
 use engine::integration::{Integration, IntegrationInfo};
+use engine::model::{ModelKey, ModelManager};
 use engine::view::canvas::Canvas;
 use engine::view::text::FormattedText;
 use engine::view::Renderable;
@@ -15,8 +18,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use engine::engine::integrations::IntegrationContext;
-use engine::model::{ModelKey, ModelManager};
 
 const BASE_URL: &str = "https://app.birdweather.com/api/v1/stations";
 
@@ -35,26 +36,22 @@ impl Integration for BirdNet {
         todo!()
     }
 
-    fn integrate(&self, context: &mut IntegrationContext<Self>) where Self: Sized {
+    fn integrate(&self, context: &mut IntegrationContext<Self>)
+    where
+        Self: Sized,
+    {
         todo!()
     }
 
-    fn configure(&mut self, controller_config: Option<Self::Configuration>) {
+    async fn configure(
+        &mut self,
+        global_configuration: GlobalConfiguration,
+        integration_configuration: Option<Self::Configuration>,
+    ) {
         todo!()
     }
 
-    fn update(&mut self, discriminant: Self::Discriminant) -> impl Future<Output=()> + Send + Sync {
-        async move {
-            todo!()
-        }
-    }
-    //type Controllers = BirdNetControllers;
-
-    //fn create_controller(&self, controller: Self::Controllers) -> impl Controller {
-        //match controller {
-            //BirdNetControllers::RecentDetections => BirdNetRecentDetections::new(),
-        //}
-    //}
+    async fn update(&mut self, discriminant: Self::Discriminant) {}
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,8 +83,6 @@ impl BirdNetRecentDetections {
 }
 
 impl BirdNetRecentDetections {
-
-
     fn configure(&mut self) {
         //println!("configure! {:?}", configuration);
         //self.configuration = configuration
@@ -175,7 +170,10 @@ impl BirdList {
 }
 
 impl Renderable for BirdList {
-    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(
+        &'r self,
+        state_manager: &'r ModelManager,
+    ) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         self.text.render(state_manager)
     }
 }
