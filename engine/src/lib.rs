@@ -10,6 +10,7 @@ pub mod model;
 
 pub mod global_configuration;
 
+mod configuration;
 pub mod display;
 pub mod engine;
 

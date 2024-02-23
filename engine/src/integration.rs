@@ -8,12 +8,16 @@ use crate::engine::integrations::IntegrationContext;
 use crate::global_configuration::GlobalConfiguration;
 
 pub struct IntegrationInfo {
+    pub key: String,
     pub name: String,
 }
 
 impl IntegrationInfo {
-    pub const fn new(name: String) -> Self {
-        Self { name }
+    pub fn new(key: &str, name: &str) -> Self {
+        Self {
+            key: key.to_string(),
+            name: name.to_string(),
+        }
     }
 }
 

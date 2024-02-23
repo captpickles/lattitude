@@ -36,9 +36,7 @@ impl Integration for AccuWeather {
     type Configuration = Configuration;
 
     fn info() -> IntegrationInfo {
-        IntegrationInfo {
-            name: "AccuWeather".to_string(),
-        }
+        IntegrationInfo::new("accuweather", "AccuWeather")
     }
 
     fn integrate(&self, context: &mut IntegrationContext<Self>)
