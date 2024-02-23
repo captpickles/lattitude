@@ -8,6 +8,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::{mpsc, Mutex};
+use engine::integration::{Integration, Integrations};
+use engine::model::ModelManager;
 
 pub enum DisplayPage<PageId> {
     PageRef(PageId),
@@ -57,14 +59,14 @@ where
         self.displays.push(Box::new(display));
     }
 
-    pub async fn display<'d, D: Into<&'d DisplayPage<PageId>>>(&mut self, display: D)
+    pub async fn display<'d, D: Into<&'d DisplayPage<PageId>>>(&mut self, state_manager: &ModelManager, display: D)
     where
         PageId: 'd,
     {
         let display = display.into();
         let pixels = match display {
-            DisplayPage::PageRef(page_id) => self.page_manager.render(*page_id).await,
-            DisplayPage::Page(page) => page.render().await,
+            DisplayPage::PageRef(page_id) => self.page_manager.render(state_manager, *page_id).await,
+            DisplayPage::Page(page) => page.render(state_manager).await,
         };
 
         for display in self.displays.iter_mut() {
@@ -85,7 +87,7 @@ where
         self.sender.clone()
     }
 
-    pub async fn run(&mut self, initial_page: PageId, home_page: PageId) {
+    pub async fn run(&mut self, state_manager: &ModelManager, initial_page: PageId, home_page: PageId) {
         let mut page = initial_page;
         let mut navigation_stack: Vec<DisplayPage<PageId>> = Vec::new();
 
@@ -100,7 +102,7 @@ where
         });
 
         // boot screen
-        self.page_manager.render(page).await;
+        self.page_manager.render(state_manager, page).await;
         tokio::time::sleep(Duration::from_secs(5)).await;
 
         // regular loop-de-loop
@@ -110,7 +112,7 @@ where
             }
 
             if let Some(cur_page) = navigation_stack.last() {
-                self.display(cur_page).await;
+                self.display(state_manager, cur_page).await;
             }
 
             // TODO: select() on timeout or interaction channel

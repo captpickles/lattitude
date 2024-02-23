@@ -2,6 +2,7 @@ use crate::view::{HorizontalAlignment, Renderable, VerticalAlignment};
 use pixelfield::pixelfield::{PixelField, Point};
 use std::future::Future;
 use std::pin::Pin;
+use crate::model::ModelManager;
 
 #[derive(Default)]
 pub struct Canvas {
@@ -32,12 +33,12 @@ impl Canvas {
 }
 
 impl Renderable for Canvas {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             let mut pixel_field = PixelField::default();
 
             for component in &self.components {
-                component.render(&mut pixel_field).await;
+                component.render(state_manager, &mut pixel_field).await;
             }
 
             Some(pixel_field)
@@ -53,8 +54,8 @@ pub struct Component {
 }
 
 impl Component {
-    pub async fn render(&self, pixel_field: &mut PixelField) {
-        if let Some(rendered) = self.renderable.render().await {
+    pub async fn render(&self, state_manager: &ModelManager, pixel_field: &mut PixelField) {
+        if let Some(rendered) = self.renderable.render(state_manager).await {
             let dimensions = rendered.dimensions();
 
             let x_offset = match self.horizontal_alignment {

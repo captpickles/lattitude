@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use crate::view::Renderable;
 use ab_glyph::{Font, FontRef, PxScale};
 use glyph_brush_layout::{
@@ -10,10 +11,12 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use crate::model::{ModelKey, ModelManager};
 
 pub enum Source {
     Static(String),
-    Dynamic(Arc<Mutex<Option<String>>>),
+    Managed(ModelKey<String>),
+    Dynamic(Arc<Mutex<Option<String>>>)
 }
 
 pub struct Text {
@@ -90,13 +93,15 @@ impl Text {
 }
 
 impl Renderable for Text {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
             let text = match &self.source {
                 Source::Static(inner) => Some(inner.clone()),
+                Source::Managed(inner) => {
+                    state_manager.get(inner).await
+                }
                 Source::Dynamic(inner) => {
-                    let locked = inner.lock().await;
-                    (*locked).as_ref().cloned()
+                    inner.lock().await.as_ref().cloned()
                 }
             };
 
@@ -112,20 +117,21 @@ impl Renderable for Text {
 pub struct FormattedText<Input, FnIn>
 where
     FnIn: From<Input> + Send,
+    Input: Debug + Clone + 'static,
 {
     formatter: Box<dyn Fn(FnIn) -> Option<String> + Send + Sync>,
-    input_state: Arc<Mutex<Option<Input>>>,
+    input_state: ModelKey<Input>,
     output_state: Arc<Mutex<Option<String>>>,
     text: Text,
 }
 
 impl<Input, FnIn> FormattedText<Input, FnIn>
 where
-    Input: Clone + Send,
+    Input: Clone + Debug + Send,
     FnIn: From<Input> + Send,
 {
     pub fn new<F: Fn(FnIn) -> Option<String> + Send + Sync + 'static>(
-        state: Arc<Mutex<Option<Input>>>,
+        state: ModelKey<Input>,
         width: u32,
         font: FontRef<'static>,
         size: f32,
@@ -143,18 +149,19 @@ where
 
 impl<Input, FnIn> Renderable for FormattedText<Input, FnIn>
 where
-    Input: Clone + Send,
+    Input: Sync + Debug + Clone + Send + 'static,
     FnIn: From<Input> + Send,
 {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move {
-            if let Some(locked) = &*self.input_state.lock().await {
-                println!("some state");
-                let s = (self.formatter)(locked.clone().into());
+            //if let Some(locked) = &*self.input_state.lock().await {
+            if let Some(value) = state_manager.get(&self.input_state).await {
+                println!("some model");
+                let s = (self.formatter)(value.clone().into());
                 println!("formatted {:?}", s);
                 *self.output_state.lock().await = s;
                 println!("render inner");
-                self.text.render().await
+                self.text.render(state_manager).await
             } else {
                 println!("no data");
                 None

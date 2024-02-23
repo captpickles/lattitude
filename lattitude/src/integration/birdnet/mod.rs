@@ -3,8 +3,7 @@ mod api;
 use ab_glyph::FontRef;
 use actix::Message;
 use chrono::{DateTime, Duration, Timelike, Utc};
-use engine::controller::{Controller, Controllers};
-use engine::integration::Integration;
+use engine::integration::{Integration, IntegrationInfo};
 use engine::view::canvas::Canvas;
 use engine::view::text::FormattedText;
 use engine::view::Renderable;
@@ -16,9 +15,12 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use engine::engine::integrations::IntegrationContext;
+use engine::model::{ModelKey, ModelManager};
 
 const BASE_URL: &str = "https://app.birdweather.com/api/v1/stations";
 
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug)]
 pub enum BirdNetControllers {
     RecentDetections,
 }
@@ -26,14 +28,33 @@ pub enum BirdNetControllers {
 pub struct BirdNet {}
 
 impl Integration for BirdNet {
+    type Discriminant = ();
     type Configuration = ();
-    type Controllers = BirdNetControllers;
 
-    fn create_controller(&self, controller: Self::Controllers) -> impl Controller {
-        match controller {
-            BirdNetControllers::RecentDetections => BirdNetRecentDetections::new(),
+    fn info() -> IntegrationInfo {
+        todo!()
+    }
+
+    fn integrate(&self, context: &mut IntegrationContext<Self>) where Self: Sized {
+        todo!()
+    }
+
+    fn configure(&mut self, controller_config: Option<Self::Configuration>) {
+        todo!()
+    }
+
+    fn update(&mut self, discriminant: Self::Discriminant) -> impl Future<Output=()> + Send + Sync {
+        async move {
+            todo!()
         }
     }
+    //type Controllers = BirdNetControllers;
+
+    //fn create_controller(&self, controller: Self::Controllers) -> impl Controller {
+        //match controller {
+            //BirdNetControllers::RecentDetections => BirdNetRecentDetections::new(),
+        //}
+    //}
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,25 +85,15 @@ impl BirdNetRecentDetections {
     }
 }
 
-impl Controller for BirdNetRecentDetections {
-    type Integration = BirdNet;
-    type Configuration = Configuration;
-    type Output = RecentDetections;
+impl BirdNetRecentDetections {
 
-    fn identifier(&self) -> String {
-        "birdNET".to_string()
+
+    fn configure(&mut self) {
+        //println!("configure! {:?}", configuration);
+        //self.configuration = configuration
     }
 
-    fn cadence(&self) -> Duration {
-        Duration::minutes(10)
-    }
-
-    fn configure(&mut self, configuration: Option<Self::Configuration>) {
-        println!("configure! {:?}", configuration);
-        self.configuration = configuration
-    }
-
-    async fn update(&mut self) -> Option<Self::Output> {
+    async fn update(&mut self) {
         if let Some(configuration) = &self.configuration {
             println!("query birdnet");
             if let Ok(response) = Client::new()
@@ -125,12 +136,12 @@ impl Controller for BirdNetRecentDetections {
 
                     self.detections = detections.iter().cloned().collect();
 
-                    return Some(RecentDetections { detections });
+                    //return Some(RecentDetections { detections });
                 }
             }
         }
 
-        None
+        //None
     }
 }
 
@@ -140,7 +151,7 @@ pub struct BirdList {
 
 impl BirdList {
     pub fn new(
-        state: Arc<Mutex<Option<RecentDetections>>>,
+        state: ModelKey<RecentDetections>,
         width: u32,
         font: FontRef<'static>,
         size: f32,
@@ -164,7 +175,7 @@ impl BirdList {
 }
 
 impl Renderable for BirdList {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
-        self.text.render()
+    fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+        self.text.render(state_manager)
     }
 }

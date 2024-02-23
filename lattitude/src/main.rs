@@ -2,13 +2,11 @@
 
 use crate::art::{build_art_registry, Art};
 use crate::cli::Cli;
-use crate::coordinator::Coordinator;
 use crate::display::bmp::BmpDisplay;
 use crate::font::{build_font_registry, Font};
 use crate::integration::birdnet::{BirdList, BirdNetRecentDetections};
 use crate::page::{build_page_manager, LattitudePage};
 use clap::Parser;
-use engine::controller::Controllers;
 use engine::page::PageManager;
 use engine::view::canvas::Canvas;
 use engine::view::pixels::Pixels;
@@ -21,12 +19,11 @@ use toml::toml;
 
 mod art;
 mod cli;
-mod coordinator;
+//mod coordinator;
 mod display;
 pub mod font;
 pub mod integration;
 mod page;
-mod state;
 
 pub const WIDTH: u32 = 1404;
 pub const HEIGHT: u32 = 1872;

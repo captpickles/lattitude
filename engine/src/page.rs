@@ -6,6 +6,7 @@ use std::future::Future;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::sync::Arc;
+use crate::model::ModelManager;
 
 pub struct Page {
     canvas: Arc<Canvas>,
@@ -20,8 +21,8 @@ impl Page {
         }
     }
 
-    pub fn render<'m>(&'m self) -> Pin<Box<dyn Future<Output = PixelField> + 'm>> {
-        Box::pin(async move { self.canvas.render().await.unwrap_or_default() })
+    pub fn render<'r>(&'r self, state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = PixelField> + 'r>> {
+        Box::pin(async move { self.canvas.render(state_manager).await.unwrap_or_default() })
     }
 }
 
@@ -47,9 +48,9 @@ where
         self.pages.insert(id, page);
     }
 
-    pub async fn render(&self, id: PageId) -> PixelField {
+    pub async fn render(&self, state_manager: &ModelManager, id: PageId) -> PixelField {
         if let Some(page) = self.pages.get(&id) {
-            page.render().await
+            page.render(state_manager).await
         } else {
             PixelField::default()
         }

@@ -8,38 +8,46 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-static PROVIDER_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-#[derive(Debug, Clone)]
-pub struct Provider {
-    id: usize,
-    name: String,
+pub struct Model<T>
+where
+    T: Clone + Sync + Send + Debug + 'static,
+{
+    inner: Arc<Mutex<Option<T>>>,
 }
 
-impl PartialEq for Provider {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl Provider {
-    pub fn new(name: &str) -> Self {
+impl<T> Model<T>
+where
+    T: Clone + Sync + Send + Debug + 'static,
+{
+    pub fn new() -> Self {
         Self {
-            id: PROVIDER_COUNTER.fetch_add(1, Ordering::Relaxed),
-            name: name.to_string(),
+            inner: Arc::new(Mutex::new(None)),
         }
     }
+
+    pub async fn update(&self, value: T) {
+        self.inner.lock().await.replace(value);
+    }
+
+    pub async fn clear(&self) {
+        self.inner.lock().await.take();
+    }
+
+    pub async fn get(&self) -> Option<T> {
+        self.inner.lock().await.clone()
+    }
 }
 
-pub struct DataKey<T>
+#[derive(Clone)]
+pub struct ModelKey<T>
 where
     T: Clone + Debug + 'static,
 {
-    provider: Provider,
+    provider: TypeId,
     _marker: PhantomData<T>,
 }
 
-impl<T> Debug for DataKey<T>
+impl<T> Debug for ModelKey<T>
 where
     T: Clone + Debug + 'static,
 {
@@ -48,12 +56,12 @@ where
     }
 }
 
-pub struct StateManager {
+pub struct ModelManager {
     primary: HashMap<TypeId, ProviderEntry>,
     convertable: HashMap<TypeId, Vec<ConverterEntry>>,
 }
 
-impl StateManager {
+impl ModelManager {
     pub fn new() -> Self {
         Self {
             primary: Default::default(),
@@ -61,7 +69,7 @@ impl StateManager {
         }
     }
 
-    pub fn register<T>(&mut self, provider: &Provider, state: Arc<Mutex<T>>)
+    pub fn register<T>(&mut self, provider: TypeId, state: Arc<Mutex<Option<T>>>)
     where
         T: 'static,
     {
@@ -90,7 +98,7 @@ impl StateManager {
         });
     }
 
-    pub fn providers_for<T>(&self) -> Vec<DataKey<T>>
+    pub fn providers_for<T>(&self) -> Vec<ModelKey<T>>
     where
         T: Debug + Clone + 'static,
     {
@@ -98,7 +106,7 @@ impl StateManager {
         if let Some(entries) = self.convertable.get(&TypeId::of::<T>()) {
             for each in entries {
                 if let Some(primary) = self.primary.get(&each.input_key) {
-                    keys.push(DataKey {
+                    keys.push(ModelKey {
                         provider: primary.provider.clone(),
                         _marker: Default::default(),
                     })
@@ -109,14 +117,14 @@ impl StateManager {
         keys
     }
 
-    pub async fn get_all<T>(&self) -> Vec<T>
+    pub async fn get_all<T>(&self) -> Vec<Option<T>>
     where
         T: Debug + Clone + 'static,
     {
         let key = TypeId::of::<T>();
 
         if let Some(primary) = self.primary.get(&key) {
-            if let Some(value) = primary.state.downcast_ref::<Arc<Mutex<T>>>() {
+            if let Some(value) = primary.state.downcast_ref::<Arc<Mutex<Option<T>>>>() {
                 return vec![value.lock().await.clone()];
             }
         }
@@ -131,7 +139,7 @@ impl StateManager {
                 if let Some(primary) = self.primary.get(input_key) {
                     let output = converter.convert(&primary.state).await;
                     if let Some(output) = output {
-                        if let Some(output) = output.downcast_ref::<T>() {
+                        if let Some(output) = output.downcast_ref::<Option<T>>() {
                             values.push(output.clone())
                         }
                     }
@@ -142,7 +150,7 @@ impl StateManager {
         values
     }
 
-    pub async fn get<T>(&self, key: DataKey<T>) -> Option<T>
+    pub async fn get<T>(&self, key: &ModelKey<T>) -> Option<T>
     where
         T: Clone + Debug + 'static,
     {
@@ -171,7 +179,7 @@ impl StateManager {
 }
 
 struct ProviderEntry {
-    provider: Provider,
+    provider: TypeId,
     state: Box<dyn Any>,
 }
 
@@ -209,9 +217,9 @@ where
         input: &'i Box<dyn Any>,
     ) -> Pin<Box<dyn Future<Output = Option<Box<dyn Any>>> + '_>> {
         Box::pin(async move {
-            if let Some(input_value) = input.downcast_ref::<Arc<Mutex<In>>>() {
+            if let Some(input_value) = input.downcast_ref::<Arc<Mutex<Option<In>>>>() {
                 let input_value = input_value.lock().await;
-                let output_value: Out = input_value.clone().into();
+                let output_value: Option<Out> = input_value.clone().map(|inner| inner.into());
                 let boxed: Box<dyn Any> = Box::new(output_value);
                 return Some(boxed);
             }
@@ -284,9 +292,10 @@ mod test {
     #[derive(Clone, Debug)]
     pub struct BirdNet {}
 
+    /*
     #[tokio::test]
     async fn whut() {
-        let mut manager = StateManager::new();
+        let mut manager = ModelManager::new();
 
         let accuweather_provider = Provider::new("AccuWeather");
         let weather_channel_provider = Provider::new("The Weather Channel");
@@ -318,7 +327,7 @@ mod test {
         println!("{:#?}", keys);
 
         for each in keys {
-            println!("{:?}", manager.get(each).await);
+            println!("{:?}", manager.get(&each).await);
         }
 
         let values = manager.get_all::<WindDirection>().await;
@@ -336,4 +345,6 @@ mod test {
         let values = manager.get_all::<BirdNet>().await;
         println!("{:#?}", values);
     }
+
+     */
 }

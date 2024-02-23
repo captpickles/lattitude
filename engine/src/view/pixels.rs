@@ -5,6 +5,7 @@ use pixelfield::pixelfield::PixelField;
 use std::future::Future;
 use std::io::Read;
 use std::pin::Pin;
+use crate::model::ModelManager;
 
 #[derive(Clone)]
 pub struct Pixels {
@@ -22,7 +23,7 @@ impl Pixels {
 }
 
 impl Renderable for Pixels {
-    fn render<'r>(&'r self) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
+    fn render<'r>(&'r self, _state_manager: &'r ModelManager) -> Pin<Box<dyn Future<Output = Option<PixelField>> + 'r>> {
         Box::pin(async move { Some(self.inner.clone()) })
     }
 }
