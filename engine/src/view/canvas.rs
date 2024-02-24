@@ -50,10 +50,10 @@ impl Renderable for Canvas {
 }
 
 pub struct Component {
-    point: Point,
-    horizontal_alignment: HorizontalAlignment,
-    vertical_alignment: VerticalAlignment,
-    renderable: Box<dyn Renderable>,
+    pub point: Point,
+    pub horizontal_alignment: HorizontalAlignment,
+    pub vertical_alignment: VerticalAlignment,
+    pub renderable: Box<dyn Renderable>,
 }
 
 impl Component {

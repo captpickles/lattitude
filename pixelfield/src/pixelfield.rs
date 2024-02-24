@@ -235,7 +235,12 @@ impl PixelField {
             }
         }
 
-        Rectangle::new((min_x, min_y), (max_x, max_y))
+        // Empty bounding box should not panic but also not be very useful.
+        if (min_x == i32::MAX) {
+            Rectangle::new((0, 0), (0, 0))
+        } else {
+            Rectangle::new((min_x, min_y), (max_x, max_y))
+        }
     }
 
     pub fn dimensions(&self) -> Dimensions {
@@ -434,7 +439,7 @@ impl PixelField {
 
 #[cfg(test)]
 mod test {
-    use crate::pixelfield::Rectangle;
+    use crate::pixelfield::{PixelField, Rectangle};
 
     #[test]
     fn origin_bbox_to_dimensions() {
@@ -468,5 +473,21 @@ mod test {
 
         assert_eq!(485, dims.width);
         assert_eq!(485, dims.height);
+    }
+
+    #[test]
+    fn negative_bbox() {
+        let dims = Rectangle::new((-3, -4), (4, 5)).dimensions();
+
+        assert_eq!(7, dims.width);
+        assert_eq!(9, dims.height);
+    }
+
+    #[test]
+    fn pixel_field_bbox() {
+        let dims = PixelField::default().bounding_box().dimensions();
+
+        assert_eq!(0, dims.width);
+        assert_eq!(0, dims.height);
     }
 }
