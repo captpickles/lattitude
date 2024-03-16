@@ -22,6 +22,16 @@ impl Color {
             Color::Gray16(inner) => inner.luma(),
         }
     }
+
+    pub fn is_white(&self) -> bool {
+        match self {
+            Color::Rgb(inner) => inner.luma() == 255,
+            Color::Binary(inner) => *inner == BlackAndWhite::White,
+            Color::Gray4(inner) => *inner == Gray4::White,
+            Color::Gray8(inner) => *inner == Gray8::White,
+            Color::Gray16(inner) => *inner == Gray16::White,
+        }
+    }
 }
 
 impl From<Color> for Gray4 {

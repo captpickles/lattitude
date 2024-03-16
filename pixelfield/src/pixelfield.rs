@@ -320,7 +320,7 @@ impl PixelField {
         'outer: for x in original_bbox.x_range() {
             for y in original_bbox.y_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color.luma() != 255 {
+                    if !color.is_white() {
                         nw.y = y;
                         break 'outer;
                     }
@@ -331,7 +331,7 @@ impl PixelField {
         'outer: for x in original_bbox.x_range().rev() {
             for y in original_bbox.y_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color.luma() != 255 {
+                    if !color.is_white() {
                         se.y = y;
                         break 'outer;
                     }
@@ -342,7 +342,7 @@ impl PixelField {
         'outer: for y in original_bbox.y_range() {
             for x in original_bbox.x_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color.luma() != 255 {
+                    if !color.is_white() {
                         nw.x = x;
                         break 'outer;
                     }
@@ -353,7 +353,7 @@ impl PixelField {
         'outer: for y in original_bbox.y_range().rev() {
             for x in original_bbox.x_range() {
                 if let Some(color) = self.get((x, y)) {
-                    if color.luma() != 255 {
+                    if !color.is_white() {
                         se.x = x;
                         break 'outer;
                     }
@@ -480,5 +480,10 @@ mod test {
 
         assert_eq!(0, dims.width);
         assert_eq!(0, dims.height);
+    }
+
+    #[test]
+    fn pixel_field_trim() {
+
     }
 }
