@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::ops::{Mul, Range};
+use bmp::consts::WHITE;
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
 pub struct Point {
@@ -411,18 +412,8 @@ impl PixelField {
 
         let mut bmp = bmp::Image::new(width, height);
 
-        for x in 0..bmp.get_width() {
-            for y in 0..bmp.get_height() {
-                bmp.set_pixel(
-                    x,
-                    y,
-                    bmp::Pixel {
-                        r: 255,
-                        g: 255,
-                        b: 255,
-                    },
-                );
-            }
+        for (x, y) in bmp.coordinates() {
+            bmp.set_pixel(x, y, WHITE);
         }
 
         for pixel in self.iter() {
