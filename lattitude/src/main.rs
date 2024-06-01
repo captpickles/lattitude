@@ -15,6 +15,8 @@ use engine::view::text::{Source, Text};
 use engine::view::{HorizontalAlignment, VerticalAlignment};
 use pixelfield::pixelfield::{Rectangle, Rotation};
 use std::env;
+use bevy_app::{App, ScheduleRunnerPlugin};
+use bevy_time::TimePlugin;
 use toml::toml;
 
 mod art;
@@ -33,7 +35,21 @@ async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
     let cli = Cli::parse();
 
-    cli.command.run().await;
+    let mut app = App::new();
+
+    app
+        .add_plugins(TimePlugin)
+        .add_plugins(ScheduleRunnerPlugin::default());
+
+    if cfg!(feature = "accuweather") {
+        app.add_plugins(integration::accuweather::AccuWeatherPlugin);
+    }
+
+    if cfg!(feature = "birdnet") {
+        app.add_plugins(integration::birdnet::BirdNetPlugin);
+    }
+
+//    cli.command.run().await;
     /*
     let font = build_font_registry()?;
     let art = build_art_registry()?;

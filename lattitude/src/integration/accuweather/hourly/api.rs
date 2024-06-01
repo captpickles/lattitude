@@ -2,9 +2,6 @@ use chrono::{DateTime, Local};
 use serde::Deserialize;
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct Envelope(pub Vec<HourlyForecast>);
-
 #[derive(Debug, Clone, Deserialize, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct HourlyForecast {

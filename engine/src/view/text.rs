@@ -37,7 +37,7 @@ impl Text {
         }
     }
 
-    fn render_text(&self, text: &str) -> Option<PixelField> {
+    pub fn render_text(&self, text: &str) -> Option<PixelField> {
         let scale = PxScale::from(self.size);
 
         let layout = Layout::Wrap {
@@ -121,7 +121,7 @@ where
     formatter: Box<dyn Fn(FnIn) -> Option<String> + Send + Sync>,
     input_state: ModelKey<Input>,
     output_state: Arc<Mutex<Option<String>>>,
-    text: Text,
+    pub text: Text,
 }
 
 impl<Input, FnIn> FormattedText<Input, FnIn>

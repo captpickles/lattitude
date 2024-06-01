@@ -27,7 +27,12 @@ toml = { version = "0.8.10", features = ["parse"] }
 embedded-hal = "1.0.0"
 linux-embedded-hal = { version = "0.4.0",  optional = true }
 it8951 = { path = "../it8951", optional = true }
+bevy_app = "0.13.0"
+bevy_ecs = "0.13.0"
+bevy_tasks = "0.13.0"
+bevy_time = "0.13.0"
 
 
 [features]
 epd = [ "linux-embedded-hal", "it8951" ]
+shape = []

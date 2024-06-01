@@ -5,6 +5,7 @@ use std::future::Future;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
+use bevy_ecs::prelude::Resource;
 
 use tokio::sync::Mutex;
 

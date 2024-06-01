@@ -3,12 +3,6 @@ use chrono::{DateTime, Local};
 use serde::Deserialize;
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Envelope {
-    pub daily_forecasts: Vec<DailyForecast>,
-}
-
 #[derive(Debug, Clone, Deserialize, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct DailyForecast {
